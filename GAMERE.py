@@ -10,7 +10,7 @@ import sys
 import json
 import threading
 from Tela_Cartas import tela_de_pausa
-from rede import iniciar_host, conectar_ao_host,fila_envio,fila_recebimento,thread_envio,thread_recebimento
+from rede import iniciar_host, conectar_ao_host,fila_envio,fila_recebimento,thread_envio,thread_recebimento, anunciar_host_udp, descobrir_host_udp
 from Variaveis import *
 from utils import *
 
@@ -23,11 +23,17 @@ ip = dados["ip"]
 
 
 if modo == "host":
+    anunciar_host_udp()  # inicia broadcast automático
     conn = iniciar_host()
-elif modo == "join":
-    conn = conectar_ao_host(ip)
-else:
-    conn = None
+if modo == "join":
+    ip_detectado = descobrir_host_udp()
+    if ip_detectado:
+        conn = conectar_ao_host(ip_detectado)
+    else:
+        print("Nenhum host encontrado na rede.")
+        pygame.quit()
+        sys.exit()
+
 
 # se não conectou, encerra
 if conn is None:

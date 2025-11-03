@@ -112,7 +112,48 @@ def iniciar_host(porta=5050):
         pygame.display.flip()
         clock.tick(30)
 
+# ===============================================================
+# === BROADCAST DE DESCOBERTA AUTOMÁTICA DO HOST (NOVIDADE) ====
+# ===============================================================
+def anunciar_host_udp(porta_udp=5051):
+    """Host envia broadcast UDP para anunciar sua presença na rede local."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    ip_local = socket.gethostbyname(socket.gethostname())
+    mensagem = f"RupturaTemporalHost:{ip_local}".encode()
 
+    def enviar():
+        while rodando_rede:
+            try:
+                s.sendto(mensagem, ("<broadcast>", porta_udp))
+                time.sleep(1)  # envia a cada 1s
+            except Exception:
+                break
+
+    threading.Thread(target=enviar, daemon=True).start()
+    
+def descobrir_host_udp(porta_udp=5051, timeout=5):
+    """Cliente escuta broadcasts UDP para detectar o IP do host."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("", porta_udp))
+    s.settimeout(timeout)
+
+    inicio = time.time()
+    while time.time() - inicio < timeout:
+        try:
+            data, addr = s.recvfrom(1024)
+            msg = data.decode()
+            if msg.startswith("RupturaTemporalHost:"):
+                ip_host = msg.split(":")[1]
+                print(f"[Descoberto Host] {ip_host}")
+                return ip_host
+        except socket.timeout:
+            continue
+        except Exception:
+            break
+
+    return None
 
 def conectar_ao_host(ip, porta=5050):
     s = socket.socket()
