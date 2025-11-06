@@ -837,24 +837,20 @@ while running:
 
 
                 # Cliente avisou que acertou com ataque especial
+                # HOST
                 if "hit_especial" in dados:
-                    idx = dados["hit_especial"]
-                    if 0 <= idx < len(inimigos_comum):
-                        inimigo = inimigos_comum[idx]
+                    rect_onda = pygame.Rect(
+                        dados["hit_especial"]["x"],
+                        dados["hit_especial"]["y"],
+                        dados["hit_especial"]["w"],
+                        dados["hit_especial"]["h"]
+                    )
+                    for inimigo in inimigos_comum[:]:
+                        if rect_onda.colliderect(inimigo["rect"]):
+                            inimigo["vida"] -= dano_person_hit * 2
+                            if inimigo["vida"] <= 0:
+                                inimigos_comum.remove(inimigo)
 
-                        # aplica o dano dobrado
-                        inimigo["vida"] -= dano_person_hit * 2
-
-                        # verifica se morreu
-                        if inimigo["vida"] <= 0:
-                            inimigos_comum.pop(idx)
-                            ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
-
-                            # soma pontos
-                            pontuacao_exib += ganho
-
-                            # envia pontuação atualizada para o cliente
-                            fila_envio.put({"pontuacao_atual": pontuacao_exib})
                  # --- Cliente sugeriu o boss ---
                 if "convite_boss" in dados and dados["convite_boss"]:
                     convite_boss_ativo = True
@@ -1151,14 +1147,26 @@ while running:
 
      # Adicionar inimigos a cada 10 segundos
     tempo_atual = pygame.time.get_ticks()
-    if mostrar_tutorial:
-        if tempo_atual > 23000 and apertou_q and tempo_atual - tempo_ultimo_inimigo >= 1000 and len(inimigos_comum) < max_inimigos and not boss_vivo1:
-            gerar_inimigo()
-            tempo_ultimo_inimigo = tempo_atual  # Atualizar o tempo do último inimigo adicionado
-    else:
-        if tempo_atual - tempo_ultimo_inimigo >= 1000 and len(inimigos_comum) < max_inimigos and not boss_vivo1:
-            gerar_inimigo()
-            tempo_ultimo_inimigo = tempo_atual  # Atualizar o tempo do último inimigo adicionado
+    if modo == "host":  # Apenas o host pode gerar inimigos
+        if mostrar_tutorial:
+            if (
+                tempo_atual > 23000
+                and apertou_q
+                and tempo_atual - tempo_ultimo_inimigo >= 1000
+                and len(inimigos_comum) < max_inimigos
+                and not boss_vivo1
+            ):
+                gerar_inimigo()
+                tempo_ultimo_inimigo = tempo_atual  # Atualiza o tempo do último inimigo adicionado
+        else:
+            if (
+                tempo_atual - tempo_ultimo_inimigo >= 1000
+                and len(inimigos_comum) < max_inimigos
+                and not boss_vivo1
+            ):
+                gerar_inimigo()
+                tempo_ultimo_inimigo = tempo_atual  # Atualiza o tempo do último inimigo adicionado
+
     
     nivel_racional = upgrades.get("Racional", 0)
     #LUGAR AONDE COLOCAMOS AS AUREAS
@@ -1229,105 +1237,132 @@ while running:
 
 
 
-    novas_ondas = []
-    for onda in ondas:
-        onda["rect"].x += velocidade_onda * math.cos(onda["angulo"])
-        onda["rect"].y += velocidade_onda * math.sin(onda["angulo"])
+    if modo == "join":
+        novas_ondas = []
+        for onda in ondas:
+            onda["rect"].x += velocidade_onda * math.cos(onda["angulo"])
+            onda["rect"].y += velocidade_onda * math.sin(onda["angulo"])
+            tempo_decorrido_onda = pygame.time.get_ticks() - onda["tempo_inicio"]
+            onda["frame_atual"] = (tempo_decorrido_onda // duracao_frame_onda) % len(onda["frames"])
+            tela.blit(onda["frames"][onda["frame_atual"]], onda["rect"])
 
-        # Atualizar o frame atual da animação da onda
-        tempo_decorrido_onda = pygame.time.get_ticks() - onda["tempo_inicio"]
-        onda["frame_atual"] = (tempo_decorrido_onda // duracao_frame_onda) % len(onda["frames"])
+            if 0 <= onda["rect"].x < largura_mapa and 0 <= onda["rect"].y < altura_mapa:
+                novas_ondas.append(onda)
 
-        # Renderizar a onda
-        tela.blit(onda["frames"][onda["frame_atual"]], onda["rect"])
-
-        # Verificar se a onda ainda está dentro do mapa
-        if (
-            0 <= onda["rect"].x < largura_mapa and
-            0 <= onda["rect"].y < altura_mapa
-        ):
-            novas_ondas.append(onda)
-
-        if modo == "join":
+            # detecta colisão, só avisa
             for idx, inimigo in enumerate(inimigos_comum):
                 if onda["rect"].colliderect(inimigo["rect"]):
                     try:
-                        fila_envio.put({"hit_especial": idx})
+                        # CLIENTE
+                        for onda in ondas:
+                            fila_envio.put({
+                                "hit_especial": {
+                                    "x": onda["rect"].x,
+                                    "y": onda["rect"].y,
+                                    "w": onda["rect"].w,
+                                    "h": onda["rect"].h
+                                }
+                            })
+
                     except:
                         pass
-        
+
+        ondas = novas_ondas
 
         
-    ondas = novas_ondas
 
-    for onda in ondas:
-        for inimigo in inimigos_comum:
-            inimigo_id = id(inimigo["rect"])  # Use o id do rect como identificador único
-            if onda["rect"].colliderect(inimigo["rect"]) and \
-            (inimigo_id not in inimigos_atingidos_por_onda or tempo_atual - inimigos_atingidos_por_onda[inimigo_id] >= 500):
-                # Aplica o dano ao inimigo
-                inimigo["vida"] -= dano_person_hit*2  
-                inimigos_atingidos_por_onda[inimigo_id] = tempo_atual  # Atualiza o tempo do último dano
+    if modo == "host":
+        novas_ondas = []
+        for onda in ondas:
+            onda["rect"].x += velocidade_onda * math.cos(onda["angulo"])
+            onda["rect"].y += velocidade_onda * math.sin(onda["angulo"])
+            tempo_decorrido_onda = pygame.time.get_ticks() - onda["tempo_inicio"]
+            onda["frame_atual"] = (tempo_decorrido_onda // duracao_frame_onda) % len(onda["frames"])
+            tela.blit(onda["frames"][onda["frame_atual"]], onda["rect"])
 
-                # Verifica se o inimigo foi derrotado
-                if inimigo["vida"] <= 0:
-                    inimigos_comum.remove(inimigo)
-                    # Progressão escalonada
-                    vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
-                    Resistencia_petro += 0.2 + nivel_ameaca * 0.1
-                    dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
-                    dano_person_hit += 0.15 + nivel_ameaca * 0.05
-                    vida_maxima_petro += 0.5 + nivel_ameaca * 0.3
-                    dano_petro += 0.015 + nivel_ameaca * 0.01
-                    dano_inimigo_longe += 0.04 + nivel_ameaca * 0.02
-                    dano_boss += 0.025 + nivel_ameaca * 0.02
-                    Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
-                    Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
+            if 0 <= onda["rect"].x < largura_mapa and 0 <= onda["rect"].y < altura_mapa:
+                novas_ondas.append(onda)
 
-                    inimigos_eliminados += 1
+        ondas = novas_ondas
 
-                    # Pontuação escalada
-                    ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
-                    pontuacao += ganho
-                    pontuacao_exib += ganho
-                    
+        # Aplica dano real
+        for onda in ondas:
+            for inimigo in inimigos_comum[:]:  # [:] evita erro ao remover
+                inimigo_id = id(inimigo["rect"])
+                if onda["rect"].colliderect(inimigo["rect"]) and \
+                (inimigo_id not in inimigos_atingidos_por_onda or tempo_atual - inimigos_atingidos_por_onda[inimigo_id] >= 500):
+                    inimigo["vida"] -= dano_person_hit * 2
+                    inimigos_atingidos_por_onda[inimigo_id] = tempo_atual
 
-                    # Cura da Petro se estiver muito ferida
-                    if vida_petro < (vida_maxima_petro * 0.6):
-                        vida_petro += (vida_maxima_petro * 0.4)
-                        if vida_petro > vida_maxima_petro:
-                            vida_petro = vida_maxima_petro
+                    if inimigo["vida"] <= 0:
+                        inimigos_comum.remove(inimigo)
+                        # Progressão escalonada
+                        vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
+                        Resistencia_petro += 0.2 + nivel_ameaca * 0.1
+                        dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
+                        dano_person_hit += 0.15 + nivel_ameaca * 0.05
+                        vida_maxima_petro += 0.5 + nivel_ameaca * 0.3
+                        dano_petro += 0.015 + nivel_ameaca * 0.01
+                        dano_inimigo_longe += 0.04 + nivel_ameaca * 0.02
+                        dano_boss += 0.025 + nivel_ameaca * 0.02
+                        Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
+                        Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
 
-                    # Boss: progressão escalada
-                    if not boss_vivo1:
-                        if vida_boss > 0:
-                            vida_boss += 15 + nivel_ameaca * 10
-                            vida_maxima_boss1 = vida_boss
-                            vida_boss2 += 20 + nivel_ameaca * 12
-                            vida_maxima_boss2 = vida_boss2
-                            vida_boss3 += 25 + nivel_ameaca * 15
-                            vida_maxima_boss3 = vida_boss3
-                            vida_boss4 += 30 + nivel_ameaca * 18
-                            vida_maxima_boss4 = vida_boss4
+                        inimigos_eliminados += 1
+
+                        # Pontuação escalada
+                        ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
+                        pontuacao += ganho
+                        pontuacao_exib += ganho
+                        
+
+                        # Cura da Petro se estiver muito ferida
+                        if vida_petro < (vida_maxima_petro * 0.6):
+                            vida_petro += (vida_maxima_petro * 0.4)
+                            if vida_petro > vida_maxima_petro:
+                                vida_petro = vida_maxima_petro
+
+                        # Boss: progressão escalada
+                        if not boss_vivo1:
+                            if vida_boss > 0:
+                                vida_boss += 15 + nivel_ameaca * 10
+                                vida_maxima_boss1 = vida_boss
+                                vida_boss2 += 20 + nivel_ameaca * 12
+                                vida_maxima_boss2 = vida_boss2
+                                vida_boss3 += 25 + nivel_ameaca * 15
+                                vida_maxima_boss3 = vida_boss3
+                                vida_boss4 += 30 + nivel_ameaca * 18
+                                vida_maxima_boss4 = vida_boss4
+                        
+
+        # Depois do cálculo, envia sincronização pro cliente
+        try:
+            fila_envio.put({"inimigos": [{"x": i["x"], "y": i["y"], "vida": i["vida"], "vida_max": i["vida_maxima"]} for i in inimigos_comum],
+                            "pontuacao_atual": pontuacao_exib})
+        except:
+            pass
+
+        
+    
         
 
 
-        # Controle de dano para o boss
-        if boss_vivo1 and onda["rect"].colliderect(pygame.Rect(pos_x_chefe, pos_y_chefe, chefe_largura, chefe_altura)):
-            boss_id = "boss"  # Identificador único para o boss no dicionário
-            tempo_atual = pygame.time.get_ticks()
+    # Controle de dano para o boss
+    if boss_vivo1 and onda["rect"].colliderect(pygame.Rect(pos_x_chefe, pos_y_chefe, chefe_largura, chefe_altura)):
+        boss_id = "boss"  # Identificador único para o boss no dicionário
+        tempo_atual = pygame.time.get_ticks()
 
-            if tempo_atual - boss_atingido_por_onda >= 500: 
-                vida_boss -= dano_person_hit * 5  
-                
-                boss_atingido_por_onda = tempo_atual  # Atualiza o tempo do último dano
+        if tempo_atual - boss_atingido_por_onda >= 500: 
+            vida_boss -= dano_person_hit * 5  
+            
+            boss_atingido_por_onda = tempo_atual  # Atualiza o tempo do último dano
 
-                # Verifica se o boss foi derrotado
-                if vida_boss <= 0:
-                    boss_vivo1 = False
-                    fila_envio.put({"boss_morto": True})
-                    vida_maxima_boss1 = 0
-                    # Aplique os efeitos ou recompensas ao derrotar o boss aqui
+            # Verifica se o boss foi derrotado
+            if vida_boss <= 0:
+                boss_vivo1 = False
+                fila_envio.put({"boss_morto": True})
+                vida_maxima_boss1 = 0
+                # Aplique os efeitos ou recompensas ao derrotar o boss aqui
         # Se o alvo atual morreu → mudar pro outro
     if alvo_atual == "host" and jogador_morto and not jogador_remoto_morto:
         alvo_atual = "cliente"

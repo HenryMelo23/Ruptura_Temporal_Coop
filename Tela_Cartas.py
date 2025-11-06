@@ -435,6 +435,36 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
             texto_rect = texto.get_rect(
             center=(pos_x_escala + largura_carta_scaled // 2, posicao_y + altura_carta_scaled // 1.5))  # Obtém o retângulo do texto
             tela.blit(texto, texto_rect)  # Desenha o texto na tela usando o retângulo
+        
+        # Atualiza a animação das cartas
+        contador_animacao += 1
+        if contador_animacao >= fps_animacao:
+            contador_animacao = 0
+            for carta in cartas_selecionadas:
+                carta["frame_atual"] = (carta["frame_atual"] + 1) % 2
+
+
+        for nome, quantidade in cartas_compradas.items():
+            if quantidade > 0:  # Apenas renderiza cartas compradas
+                # Renderiza a imagem da carta
+                imagem_carta = cartas_imagens[nome]
+                tela.blit(imagem_carta, (pos_x, pos_y))
+                
+                # Renderiza a quantidade de cartas compradas
+                fonte = pygame.font.SysFont('Texto/Doctor Glitch.otf', 20)
+                texto = fonte.render(str(quantidade), True, (0, 0, 0))  # Cor do texto em branco
+                tela.blit(texto, (pos_x + 30, pos_y + 70))  
+                
+                # Atualiza a posição X para a próxima carta
+                pos_x += 50  # Espaço entre as cartas  
+        render_texto_com_contorno(fonte_titulo, f"Pontuação: {pontuacao_exib}", cor_texto, cor_contorno, 450, 50)
+
+        # Renderizar "Valor da Rolagem"
+        render_texto_com_contorno(fonte_texto, f"Valor da Rolagem: {valor_rolagem}", cor_texto, cor_contorno, 450, 120)
+
+        # Renderizar explicação menor
+        render_texto_com_contorno(fonte_pequena, "aumenta 40% do valor líquido (por rolagem)", cor_texto, cor_contorno, 450, 180)
+
         if mostrar_info:
             carta_selecionada = cartas_selecionadas[carta_selecionada_index]
             pos_x_info = posicao_inicial + carta_selecionada_index * (largura_carta + distancia_entre_cartas) + posicao_info_x
@@ -470,34 +500,6 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
             for i, linha in enumerate(linhas):
                 texto_linha = fonte_pequena.render(linha.strip(), True, (0, 0, 0))
                 tela.blit(texto_linha, (pos_x_info + 10, pos_y_info + 35 + i * 18))
-        # Atualiza a animação das cartas
-        contador_animacao += 1
-        if contador_animacao >= fps_animacao:
-            contador_animacao = 0
-            for carta in cartas_selecionadas:
-                carta["frame_atual"] = (carta["frame_atual"] + 1) % 2
-
-
-        for nome, quantidade in cartas_compradas.items():
-            if quantidade > 0:  # Apenas renderiza cartas compradas
-                # Renderiza a imagem da carta
-                imagem_carta = cartas_imagens[nome]
-                tela.blit(imagem_carta, (pos_x, pos_y))
-                
-                # Renderiza a quantidade de cartas compradas
-                fonte = pygame.font.SysFont('Texto/Doctor Glitch.otf', 20)
-                texto = fonte.render(str(quantidade), True, (0, 0, 0))  # Cor do texto em branco
-                tela.blit(texto, (pos_x + 30, pos_y + 70))  
-                
-                # Atualiza a posição X para a próxima carta
-                pos_x += 50  # Espaço entre as cartas  
-        render_texto_com_contorno(fonte_titulo, f"Pontuação: {pontuacao_exib}", cor_texto, cor_contorno, 450, 50)
-
-        # Renderizar "Valor da Rolagem"
-        render_texto_com_contorno(fonte_texto, f"Valor da Rolagem: {valor_rolagem}", cor_texto, cor_contorno, 450, 120)
-
-        # Renderizar explicação menor
-        render_texto_com_contorno(fonte_pequena, "aumenta 40% do valor líquido (por rolagem)", cor_texto, cor_contorno, 450, 180)
         tela.blit(icone_q, posicao_icone_q)
         tela.blit(icone_rolagem, posicao_icone_rolagem)
         pygame.display.flip()
