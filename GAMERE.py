@@ -1,4 +1,3 @@
-
 import pygame
 import subprocess
 import sys
@@ -2411,4 +2410,3 @@ while running:
 
 # Encerrar o Pygame
 pygame.quit()
-sys.exit()
