@@ -307,6 +307,7 @@ frame_atual = 0
 frame_atual_disparo = 0
 # Atualizar a última direção da personagem
 ultima_tecla_movimento = None
+direcao_player2 = None
 movimento_pressionado = False
 #as seguintes variáveis para controle do tempo de hit do inimigo
 tempo_ultimo_hit_inimigo = pygame.time.get_ticks()
@@ -592,6 +593,23 @@ def calcular_direcao_para_inimigo(personagem, inimigos):
     else:
         return (0, 0)  # Se não houver inimigos, retorne a direção neutra
 
+# aplica os escalonamento do jogo ao eliminar os inimigos
+def aplicar_crescimento_personalizado():
+    global vida_inimigo_maxima, Resistencia_petro, dano_inimigo_perto, dano_person_hit
+    global vida_maxima_petro, dano_petro, dano_inimigo_longe, dano_boss
+    global Dano_Boss_Habilit, Velocidade_Inimigos_1 , inimigos_eliminados
+
+    vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
+    Resistencia_petro += 0.2 + nivel_ameaca * 0.1
+    dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
+    dano_person_hit += 0.15 + nivel_ameaca * 0.05
+    vida_maxima_petro += 0.5 + nivel_ameaca * 0.3
+    dano_petro += 0.02 + nivel_ameaca * 0.01
+    dano_inimigo_longe += 0.03 + nivel_ameaca * 0.02
+    dano_boss += 0.04 + nivel_ameaca * 0.02
+    Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
+    Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
+    inimigos_eliminados += 1
 
 
 
@@ -626,7 +644,7 @@ def verificar_colisao_personagem_inimigo(personagem_rect, inimigos_rects):
     return False  # Sem colisão
 
 def soltar_moeda(posicao):
-    chance = 0.10 # Chance da moeda dropar 10%
+    chance = 1 # Chance da moeda dropar 10%
     if random.random() < chance:
         tamanho_moeda = (36, 36)  # Novo tamanho desejado
         sprite_redimensionada = pygame.transform.scale(sprite_moeda, tamanho_moeda)
@@ -826,13 +844,22 @@ while running:
 
                         # verifica se morreu
                         if inimigo["vida"] <= 0:
+                            # Guarda posição antes de remover
+                            posicao_inimigo = inimigo["rect"].center
                             inimigos_comum.pop(idx)
                             ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
                             # soma pontos
                             pontuacao_exib += ganho  # ou o valor real do inimigo
-
                             # envia pontuação atualizada para o cliente
                             fila_envio.put({"pontuacao_atual": pontuacao_exib})
+                            aplicar_crescimento_personalizado()
+                            fila_envio.put({"crescimento_local": True})
+                            
+                            # Host também avisa o client para soltar moeda no local certo
+                            try:
+                                fila_envio.put({"drop_moeda": posicao_inimigo})
+                            except:
+                                pass
 
 
                 # Cliente avisou que acertou com ataque especial
@@ -849,6 +876,9 @@ while running:
                             inimigo["vida"] -= dano_person_hit * 2
                             if inimigo["vida"] <= 0:
                                 inimigos_comum.remove(inimigo)
+                                fila_envio.put({"pontuacao_atual": pontuacao_exib})
+                                aplicar_crescimento_personalizado()
+                                fila_envio.put({"crescimento_local": True})
 
                  # --- Cliente sugeriu o boss ---
                 if "convite_boss" in dados and dados["convite_boss"]:
@@ -955,51 +985,57 @@ while running:
                         cor_ping = (255, 255, 0)
                     else:
                         cor_ping = (255, 0, 0)
+
                 if "pontuacao_atual" in dados:
                     pontuacao_exib = dados["pontuacao_atual"]
+                    
                 if "abrir_loja" in dados:
-                    if dados["abrir_loja"]:
+                    if "abrir_loja" in dados:
+                        if dados["abrir_loja"]:
+                            quantidade_cartas = dados.get("quantidade_cartas", 1)
                         
-                        ret = tela_de_pausa(velocidade_personagem, intervalo_disparo, vida, largura_disparo, altura_disparo,
-                                    trembo, dano_person_hit, chance_critico, roubo_de_vida, quantidade_roubo_vida,
-                                    tempo_cooldown_dash, vida_maxima, Petro_active, Resistencia, vida_petro,
-                                    vida_maxima_petro, dano_petro, xp_petro, petro_evolucao, Resistencia_petro,
-                                    Chance_Sorte, Poison_Active, Dano_Veneno_Acumulado, Executa_inimigo, Ultimo_Estalo,
-                                    mostrar_info, Mercenaria_Active, Valor_Bonus, dispositivo_ativo, Tempo_cura,
-                                    porcentagem_cura, cartas_compradas, pontuacao_exib)
-                        velocidade_personagem = ret[0]
-                        intervalo_disparo = ret[1]
-                        vida = ret[2]
-                        largura_disparo =ret[3]
-                        altura_disparo =ret[4]
-                        trembo= ret[5]
-                        dano_person_hit= ret[6]
-                        chance_critico= ret[7]
-                        roubo_de_vida= ret[8]
-                        quantidade_roubo_vida= ret[9]
-                        tempo_cooldown_dash= ret[10]
-                        vida_maxima= ret[11]
-                        Petro_active= ret[12]
-                        Resistencia=  ret[13]
-                        vida_petro= ret[14]
-                        vida_maxima_petro= ret[15]
-                        dano_petro= ret[16]
-                        xp_petro= ret[17]
-                        petro_evolucao= ret[18]
-                        Resistencia_petro= ret[19]
-                        Chance_Sorte= ret[20]
-                        Poison_Active= ret[21]
-                        Dano_Veneno_Acumulado= ret[22]
-                        Executa_inimigo= ret[23]
-                        Ultimo_Estalo= ret[24]
-                        Mercenaria_Active= ret[25]
-                        Valor_Bonus= ret[26]
-                        dispositivo_ativo=ret[27]
-                        Tempo_cura=ret[28]
-                        porcentagem_cura=ret[29]
-                        cartas_compradas= ret[30]
-                        pontuacao_exib= ret[31]
-                        tela_de_espera(tela, fila_envio, fila_recebimento, modo)
+                            ret = tela_de_pausa(velocidade_personagem, intervalo_disparo, vida, largura_disparo, altura_disparo,
+                                        trembo, dano_person_hit, chance_critico, roubo_de_vida, quantidade_roubo_vida,
+                                        tempo_cooldown_dash, vida_maxima, Petro_active, Resistencia, vida_petro,
+                                        vida_maxima_petro, dano_petro, xp_petro, petro_evolucao, Resistencia_petro,
+                                        Chance_Sorte, Poison_Active, Dano_Veneno_Acumulado, Executa_inimigo, Ultimo_Estalo,
+                                        mostrar_info, Mercenaria_Active, Valor_Bonus, dispositivo_ativo, Tempo_cura,
+                                        porcentagem_cura, cartas_compradas, pontuacao_exib,
+                                        max_cartas_compraveis=quantidade_cartas)
+                            velocidade_personagem = ret[0]
+                            intervalo_disparo = ret[1]
+                            vida = ret[2]
+                            largura_disparo =ret[3]
+                            altura_disparo =ret[4]
+                            trembo= ret[5]
+                            dano_person_hit= ret[6]
+                            chance_critico= ret[7]
+                            roubo_de_vida= ret[8]
+                            quantidade_roubo_vida= ret[9]
+                            tempo_cooldown_dash= ret[10]
+                            vida_maxima= ret[11]
+                            Petro_active= ret[12]
+                            Resistencia=  ret[13]
+                            vida_petro= ret[14]
+                            vida_maxima_petro= ret[15]
+                            dano_petro= ret[16]
+                            xp_petro= ret[17]
+                            petro_evolucao= ret[18]
+                            Resistencia_petro= ret[19]
+                            Chance_Sorte= ret[20]
+                            Poison_Active= ret[21]
+                            Dano_Veneno_Acumulado= ret[22]
+                            Executa_inimigo= ret[23]
+                            Ultimo_Estalo= ret[24]
+                            Mercenaria_Active= ret[25]
+                            Valor_Bonus= ret[26]
+                            dispositivo_ativo=ret[27]
+                            Tempo_cura=ret[28]
+                            porcentagem_cura=ret[29]
+                            cartas_compradas= ret[30]
+                            pontuacao_exib= ret[31]
+                            tela_de_espera(tela, fila_envio, fila_recebimento, modo)
+                            fila_envio.put({"pontuacao_atual": pontuacao_exib})
                 # --- Host convidou o boss ---
                 if "convite_boss" in dados and dados["convite_boss"]:
                     convite_boss_ativo = True
@@ -1030,6 +1066,12 @@ while running:
                         frame_porcentagem = frames_chefe1_4
                 if "boss_morto" in dados and dados["boss_morto"]:
                     boss_vivo1 = False
+                if "crescimento_local" in dados:
+                    aplicar_crescimento_personalizado()
+                if "drop_moeda" in dados:
+                    posicao_inimigo = dados["drop_moeda"]
+                    soltar_moeda(posicao_inimigo)
+
 
 
                     
@@ -1295,24 +1337,14 @@ while running:
 
                     if inimigo["vida"] <= 0:
                         inimigos_comum.remove(inimigo)
-                        # Progressão escalonada
-                        vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
-                        Resistencia_petro += 0.2 + nivel_ameaca * 0.1
-                        dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
-                        dano_person_hit += 0.15 + nivel_ameaca * 0.05
-                        vida_maxima_petro += 0.5 + nivel_ameaca * 0.3
-                        dano_petro += 0.015 + nivel_ameaca * 0.01
-                        dano_inimigo_longe += 0.04 + nivel_ameaca * 0.02
-                        dano_boss += 0.025 + nivel_ameaca * 0.02
-                        Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
-                        Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
-
-                        inimigos_eliminados += 1
-
                         # Pontuação escalada
                         ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
                         pontuacao += ganho
                         pontuacao_exib += ganho
+                        aplicar_crescimento_personalizado()
+                        fila_envio.put({"pontuacao_atual": pontuacao_exib})
+                        fila_envio.put({"crescimento_local": True})
+            
                         
 
                         # Cura da Petro se estiver muito ferida
@@ -1326,18 +1358,13 @@ while running:
                             if vida_boss > 0:
                                 vida_boss += 15 + nivel_ameaca * 10
                                 vida_maxima_boss1 = vida_boss
-                                vida_boss2 += 20 + nivel_ameaca * 12
-                                vida_maxima_boss2 = vida_boss2
-                                vida_boss3 += 25 + nivel_ameaca * 15
-                                vida_maxima_boss3 = vida_boss3
-                                vida_boss4 += 30 + nivel_ameaca * 18
-                                vida_maxima_boss4 = vida_boss4
                         
 
         # Depois do cálculo, envia sincronização pro cliente
         try:
             fila_envio.put({"inimigos": [{"x": i["x"], "y": i["y"], "vida": i["vida"], "vida_max": i["vida_maxima"]} for i in inimigos_comum],
                             "pontuacao_atual": pontuacao_exib})
+            
         except:
             pass
 
@@ -1444,6 +1471,7 @@ while running:
                 
                 elif Dano_pos_resistencia_person > 0:
                     vida -= Dano_pos_resistencia_person
+                    print(dano_inimigo_perto)
                     if aurea == "Impulsiva":
                         eliminacoes_consecutivas_impulsiva = 0  # Perde streak se levar dano
 
@@ -1710,12 +1738,7 @@ while running:
                         if vida_boss>0:
                             vida_boss+=55
                             vida_maxima_boss1= vida_boss
-                            vida_boss2+=66
-                            vida_maxima_boss2= vida_boss2
-                            vida_boss3+=72
-                            vida_maxima_boss3= vida_boss3   
-                            vida_boss4+=82
-                            vida_maxima_boss4= vida_boss4
+
                         
         if vida_petro<=0:
             Petro_active= False
@@ -1762,8 +1785,6 @@ while running:
                     vida_petro -= int(dano_boss)
                     vida_petro+= int(vida_maxima_petro-vida_petro)*quantidade_roubo_vida
                     vida_boss-= int(dano_person_hit*0.15)+15
-                    0
-                    # Aqui você pode adicionar outras ações relacionadas ao dano ao "boss"
                     tempo_anterior_petro = tempo_atual_petro
 
         if comando_direção_petro:
@@ -1925,203 +1946,157 @@ while running:
             vida_maxima_boss1
         )
 
+    if modo == "host":
+        for inimigo in inimigos_comum:
+            inimigo_rect = inimigo["rect"]
+            inimigo_image = inimigo["image"]
 
-    for inimigo in inimigos_comum:
-        inimigo_rect = inimigo["rect"]
-        inimigo_image = inimigo["image"]
+            inimigo_atingido = False
 
-        inimigo_atingido = False
-
-        for disparo in disparos:
-            
-            if verificar_colisao_disparo_inimigo(
-                disparo,
-                (inimigo["rect"].x, inimigo["rect"].y),
-                largura_disparo,
-                altura_disparo,
-                largura_inimigo,
-                altura_inimigo,
-                inimigos_eliminados
-            ):
-                if random.random() <= chance_critico:  # chance de dano crítico
-                    dano = dano_person_hit * 3  # Valor do dano crítico é 3 vezes o dano normal
-                    cor = (255, 255, 0)  # Amarelo (RGB)
-                    fonte_dano = fonte_dano_critico
-                else:
-                    dano = dano_person_hit
-                    cor = (255, 0, 0)  # Vermelho (RGB)
-                    fonte_dano = fonte_dano_normal
-
-                if Petro_active:
-                    if vida_petro > vida_maxima_petro:
-                        vida_petro += (vida_maxima_petro - vida_petro) * 0.25
-
-                # Renderize o texto do dano
-                texto_dano = fonte_dano.render("-" + str(int(dano)), True, cor)
-                # Desenhe o texto na tela perto do chefe
-                pos_texto = (
-                    inimigo["rect"].x + largura_inimigo // 2 - texto_dano.get_width() // 2,
-                    inimigo["rect"].y - 20
-                )
-                # Rastreie o tempo de exibição do texto
-                tempo_texto_dano = pygame.time.get_ticks()
-
-                inimigo["vida"] -= dano
-                disparos.remove(disparo)  # Remover o disparo após colisão
-
-                # Notifica o host se for client
-                if modo == "join":
-                    try:
-                        idx = inimigos_comum.index(inimigo)
-                        fila_envio.put({"hit": idx})
-                    except:
-                        pass
+            for disparo in disparos:
                 
-                if inimigo["vida"] <= 0:
-                    posicao_inimigo = inimigo["rect"].center
-                    soltar_moeda(posicao_inimigo)
-                    inimigos_comum.remove(inimigo)
-                    
-                    # Crescimento proporcional por nível de ameaça
-                    vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
-                    Resistencia_petro += 0.2 + nivel_ameaca * 0.1
-                    dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
-                    dano_person_hit += 0.15 + nivel_ameaca * 0.05
-                    vida_maxima_petro += 0.5 + nivel_ameaca * 0.3
-                    dano_petro += 0.02 + nivel_ameaca * 0.01
-                    dano_inimigo_longe += 0.03 + nivel_ameaca * 0.02
-                    dano_boss += 0.04 + nivel_ameaca * 0.02
-                    Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
-                    Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
+                if verificar_colisao_disparo_inimigo(
+                    disparo,
+                    (inimigo["rect"].x, inimigo["rect"].y),
+                    largura_disparo,
+                    altura_disparo,
+                    largura_inimigo,
+                    altura_inimigo,
+                    inimigos_eliminados
+                ):
+                    if random.random() <= chance_critico:  # chance de dano crítico
+                        dano = dano_person_hit * 3  # Valor do dano crítico é 3 vezes o dano normal
+                        cor = (255, 255, 0)  # Amarelo (RGB)
+                        fonte_dano = fonte_dano_critico
+                    else:
+                        dano = dano_person_hit
+                        cor = (255, 0, 0)  # Vermelho (RGB)
+                        fonte_dano = fonte_dano_normal
 
-                    inimigos_eliminados += 1
-                    if modo == "host":
-                        # Pontuação com escala suave
+                    if Petro_active:
+                        if vida_petro < vida_maxima_petro:
+                            vida_petro += (vida_maxima_petro - vida_petro) * 0.25
+
+                    # Renderize o texto do dano
+                    texto_dano = fonte_dano.render("-" + str(int(dano)), True, cor)
+                    # Desenhe o texto na tela perto do chefe
+                    pos_texto = (
+                        inimigo["rect"].x + largura_inimigo // 2 - texto_dano.get_width() // 2,
+                        inimigo["rect"].y - 20
+                    )
+                    # Rastreie o tempo de exibição do texto
+                    tempo_texto_dano = pygame.time.get_ticks()
+
+                    inimigo["vida"] -= dano
+                    disparos.remove(disparo)  # Remover o disparo após colisão
+
+                    
+                    
+                    if inimigo["vida"] <= 0:
+                        posicao_inimigo = inimigo["rect"].center
+                        soltar_moeda(posicao_inimigo)
+                        # envia pro client desenhar a moeda também
+                        try:
+                            fila_envio.put({"drop_moeda": posicao_inimigo})
+                        except:
+                            pass
+                        inimigos_comum.remove(inimigo)
+                        
+                        # Crescimento proporcional por nível de ameaça
+                        aplicar_crescimento_personalizado()
+                        
                         ganho = int(75 + math.log2(inimigos_eliminados + 1) * 4)
                         pontuacao += ganho
                         eliminacoes_consecutivas_impulsiva += 1
-                        if Mercenaria_Active:
-                            eliminacoes_consecutivas += 1
-                            pontuacao_exib += ganho + bonus_pontuacao
-                            if eliminacoes_consecutivas % 5 == 0:
-                                bonus_pontuacao += Valor_Bonus
-                        else:
-                            pontuacao_exib += ganho
-                            fila_envio.put({"pontuacao_atual": pontuacao_exib})
+                        
+                        pontuacao_exib += ganho
+                        fila_envio.put({"pontuacao_atual": pontuacao_exib})
+                        fila_envio.put({"crescimento_local": True})
+                        print("eliminação do host e enviou para que o client creça tambem, sincronização dos pontos...")
 
-                    # Boss: aumento escalonado
-                    if not boss_vivo1:
-                        if vida_boss > 0:
-                            vida_boss += 15 + nivel_ameaca * 10
-                            vida_maxima_boss1 = vida_boss
-                            vida_boss2 += 20 + nivel_ameaca * 12
-                            vida_maxima_boss2 = vida_boss2
-                            vida_boss3 += 25 + nivel_ameaca * 15
-                            vida_maxima_boss3 = vida_boss3
-                            vida_boss4 += 30 + nivel_ameaca * 18
-                            vida_maxima_boss4 = vida_boss4
+                        # Boss: aumento escalonado
+                        if not boss_vivo1:
+                            if vida_boss > 0:
+                                vida_boss += 15 + nivel_ameaca * 10
+                                vida_maxima_boss1 = vida_boss
 
-                if random.random() < roubo_de_vida:
-                    vida += (vida_maxima - vida) * quantidade_roubo_vida
+                    if random.random() < roubo_de_vida:
+                        vida += (vida_maxima - vida) * quantidade_roubo_vida
 
-                if Poison_Active:
-                    inimigo["veneno"] = {
-                        "dano_por_tick": inimigo["vida_maxima"] * Dano_Veneno_Acumulado,  # 0.5% da vida máxima
-                        "tempo_inicio": pygame.time.get_ticks(),
-                        "duracao": 4000,  # 4 segundos
-                        "ultimo_tick": pygame.time.get_ticks(),  # Tempo do último tick
-                        "posicao_texto": (inimigo["rect"].x, inimigo["rect"].y - 20),  # Posição inicial do texto
-                        "tempo_texto_dano": pygame.time.get_ticks()  # Tempo de exibição do texto
-                    }
+                    
 
-                # Dentro do loop principal, fora do loop de verificação de disparo
-                if Ultimo_Estalo and inimigo["vida"] <= Executa_inimigo * inimigo["vida_maxima"]:
-                    estalos.play()
-                    posicao_inimigo = inimigo["rect"].center
-                    soltar_moeda(posicao_inimigo)
-                    inimigos_comum.remove(inimigo)
-
-                    # Crescimento escalonado dos atributos
-                    vida_inimigo_maxima += 1.5 + nivel_ameaca * 0.75
-                    Resistencia_petro += 0.25 + nivel_ameaca * 0.1
-                    dano_inimigo_perto += 0.2 + nivel_ameaca * 0.1
-                    vida_maxima_petro += 0.6 + nivel_ameaca * 0.3
-                    dano_petro += 0.015 + nivel_ameaca * 0.01
-                    dano_inimigo_longe += 0.04 + nivel_ameaca * 0.02
-                    dano_boss += 0.03 + nivel_ameaca * 0.02
-                    Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
-                    Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
-
-                    inimigos_eliminados += 1
-
-                    # Pontuação escalada com progressão suave
-                    ganho_pontos = int(75 + math.log2(inimigos_eliminados + 1) * 5)
-                    pontuacao += ganho_pontos
-                    eliminacoes_consecutivas_impulsiva += 1
-
-                    # Pontuação com carta Mercenária
-                    if Mercenaria_Active:
-                        eliminacoes_consecutivas += 1
-                        pontuacao_exib += ganho_pontos + bonus_pontuacao
-                        if eliminacoes_consecutivas % 5 == 0:
-                            bonus_pontuacao += Valor_Bonus
-                    else:
-                        pontuacao_exib += ganho_pontos
-
-                    # Escalonamento de vida dos bosses (somente se não estiver ativo no momento)
-                    if not boss_vivo1:
-                        if vida_boss > 0:
-                            vida_boss += 15 + nivel_ameaca * 10
-                            vida_maxima_boss1 = vida_boss
-                            vida_boss2 += 20 + nivel_ameaca * 12
-                            vida_maxima_boss2 = vida_boss2
-                            vida_boss3 += 25 + nivel_ameaca * 15
-                            vida_maxima_boss3 = vida_boss3
-                            vida_boss4 += 30 + nivel_ameaca * 18
-                            vida_maxima_boss4 = vida_boss4
-
-                    break  # Sai do loop interno para evitar problemas ao modificar a lista enquanto iteramos sobre ela
+            if inimigo_atingido:
+                break  # Sair do loop externo se um inimigo foi atingido
+        
 
         
-               
-
-        if "veneno" in inimigo:
-            # Verifique se é hora de aplicar dano
-            if tempo_atual - inimigo["veneno"]["ultimo_tick"] >= 500:
-                inimigo["vida"] -= inimigo["veneno"]["dano_por_tick"]
-                inimigo["veneno"]["ultimo_tick"] = tempo_atual  # Atualiza o tempo do último tick
-                inimigo["veneno"]["tempo_texto_dano"] = tempo_atual  # Atualiza o tempo de exibição do texto
-
-            # Exibe o texto apenas por 1.5 segundos após o dano
-            if tempo_atual - inimigo["veneno"]["tempo_texto_dano"] <= 250:
-                dano_veneno_texto = "-" + str(int(inimigo["veneno"]["dano_por_tick"]))
-
-                # Renderize o texto do dano com borda preta
-                texto_dano_veneno = fonte_veneno.render(dano_veneno_texto, True, (0, 255, 0))
-                texto_dano_veneno_borda = fonte_veneno.render(dano_veneno_texto, True, (0, 0, 0))
-
-                # Posicione o texto
-                pos_texto = (inimigo["rect"].x + largura_inimigo // 2 - texto_dano_veneno.get_width() // 2,
-                         inimigo["rect"].y - 30)
-
-                # Exibe o texto com borda preta e o texto em verde
-                tela.blit(texto_dano_veneno_borda, (pos_texto[0] - 1, pos_texto[1]))
-                tela.blit(texto_dano_veneno_borda, (pos_texto[0] + 1, pos_texto[1]))
-                tela.blit(texto_dano_veneno_borda, (pos_texto[0], pos_texto[1] - 1))
-                tela.blit(texto_dano_veneno_borda, (pos_texto[0], pos_texto[1] + 1))
-                tela.blit(texto_dano_veneno, pos_texto)  # Texto principal em verde
-
-            # Verifica se o efeito de veneno expirou
-            if tempo_atual - inimigo["veneno"]["tempo_inicio"] >= inimigo["veneno"]["duracao"]:
-                del inimigo["veneno"]  # Remove o efeito de veneno ao expirar        
-
-        if inimigo_atingido:
-            break  # Sair do loop externo se um inimigo foi atingido
+            if pontuacao_exib > pontuacao_magia:
+                pontuacao_magia = min(pontuacao_exib, maxima_pontuacao_magia)
     
+    if modo == "join":
+        for inimigo in inimigos_comum:
+            inimigo_rect = inimigo["rect"]
+            inimigo_image = inimigo["image"]
 
-    
-        if pontuacao_exib > pontuacao_magia:
-            pontuacao_magia = min(pontuacao_exib, maxima_pontuacao_magia)
+            inimigo_atingido = False
+
+            for disparo in disparos:
+                
+                if verificar_colisao_disparo_inimigo(
+                    disparo,
+                    (inimigo["rect"].x, inimigo["rect"].y),
+                    largura_disparo,
+                    altura_disparo,
+                    largura_inimigo,
+                    altura_inimigo,
+                    inimigos_eliminados
+                ):
+                    if random.random() <= chance_critico:  # chance de dano crítico
+                        dano = dano_person_hit * 3  # Valor do dano crítico é 3 vezes o dano normal
+                        cor = (255, 255, 0)  # Amarelo (RGB)
+                        fonte_dano = fonte_dano_critico
+                    else:
+                        dano = dano_person_hit
+                        cor = (255, 0, 0)  # Vermelho (RGB)
+                        fonte_dano = fonte_dano_normal
+
+                    if Petro_active:
+                        if vida_petro < vida_maxima_petro:
+                            vida_petro += (vida_maxima_petro - vida_petro) * 0.25
+
+                    # Renderize o texto do dano
+                    texto_dano = fonte_dano.render("-" + str(int(dano)), True, cor)
+                    # Desenhe o texto na tela perto do chefe
+                    pos_texto = (
+                        inimigo["rect"].x + largura_inimigo // 2 - texto_dano.get_width() // 2,
+                        inimigo["rect"].y - 20
+                    )
+                    # Rastreie o tempo de exibição do texto
+                    tempo_texto_dano = pygame.time.get_ticks()
+                    disparos.remove(disparo)  # Remover o disparo após colisão
+                    # Notifica o host se for client
+                    if modo == "join":
+                        try:
+                            idx = inimigos_comum.index(inimigo)
+                            fila_envio.put({"hit": idx})
+                        except:
+                            pass
+                    
+                    
+                
+                        
+                    if random.random() < roubo_de_vida:
+                        vida += (vida_maxima - vida) * quantidade_roubo_vida
+
+                    
+
+            if inimigo_atingido:
+                break  # Sair do loop externo se um inimigo foi atingido
+        
+
+        
+            if pontuacao_exib > pontuacao_magia:
+                pontuacao_magia = min(pontuacao_exib, maxima_pontuacao_magia)
     
                     
     
@@ -2132,11 +2107,19 @@ while running:
     # Verifica se a pontuação atingiu 1500 e se o jogador pressionou 'Q'
     if modo == "host":
         if pontuacao_exib >= custo_carta_atual and keys[config_teclas["Comprar na loja"]] or (joystick and joystick.get_button(3)):
-            pontuacao_exib -= custo_carta_atual
-            pontuacao_magia -= custo_carta_atual
-            apertou_q= True
-            
-            fila_envio.put({"abrir_loja": True})
+            # Calcula quantas cartas o jogador pode comprar
+            max_cartas = pontuacao_exib // custo_carta_atual
+            if max_cartas <= 0:
+                continue  # segurança
+
+            # Debita tudo de uma vez
+            total_custo = custo_carta_atual * max_cartas
+            pontuacao_exib -= total_custo
+            pontuacao_magia -= total_custo
+            apertou_q = True
+
+            # Envia pro client abrir loja também
+            fila_envio.put({"abrir_loja": True, "quantidade_cartas": max_cartas})
     
             ret = tela_de_pausa(velocidade_personagem, intervalo_disparo, vida, largura_disparo, altura_disparo,
                                 trembo, dano_person_hit, chance_critico, roubo_de_vida, quantidade_roubo_vida,
@@ -2144,7 +2127,7 @@ while running:
                                 vida_maxima_petro, dano_petro, xp_petro, petro_evolucao, Resistencia_petro,
                                 Chance_Sorte, Poison_Active, Dano_Veneno_Acumulado, Executa_inimigo, Ultimo_Estalo,
                                 mostrar_info, Mercenaria_Active, Valor_Bonus, dispositivo_ativo, Tempo_cura,
-                                porcentagem_cura, cartas_compradas, pontuacao_exib)
+                                porcentagem_cura, cartas_compradas, pontuacao_exib,max_cartas_compraveis=max_cartas)
             velocidade_personagem = ret[0]
             intervalo_disparo = ret[1]
             vida = ret[2]

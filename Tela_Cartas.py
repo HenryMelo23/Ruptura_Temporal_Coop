@@ -9,11 +9,10 @@ import time
 
 def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo, altura_disparo,trembo,dano_person_hit,chance_critico,roubo_de_vida,quantidade_roubo_vida,
                   tempo_cooldown_dash,vida_maxima,Petro_active,Resistencia,vida_petro,vida_maxima_petro,dano_petro,xp_petro,petro_evolucao,Resistencia_petro,Chance_Sorte,Poison_Active,Dano_Veneno_Acumulado,Executa_inimigo,Ultimo_Estalo,mostrar_info,Mercenaria_Active,Valor_Bonus,dispositivo_ativo,Tempo_cura,
-                    porcentagem_cura,cartas_compradas,pontuacao_exib):
-    
-
-    
-    pausa = True
+                    porcentagem_cura,cartas_compradas,pontuacao_exib,max_cartas_compraveis=1):
+    Rolagens_possiveis = 3
+    Rolagens_Dadas = 0
+    compras_restantes = max_cartas_compraveis
     DELAY_ENTRE_CARTAS = 200
     ultima_mudanca_de_carta = pygame.time.get_ticks()
     
@@ -207,8 +206,8 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
     fonte = pygame.font.Font(None, 20)
 
     pygame.display.set_caption("Cartas")
-    
-    while pausa:
+    print(compras_restantes)
+    while compras_restantes > 0:
         pos_x = largura_tela // 2 - (len(cartas_compradas) * 100) // 2  # centraliza as cartas
         pos_y = altura_tela - 90  
         
@@ -225,7 +224,7 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                     carta_selecionada = cartas_selecionadas[carta_selecionada_index]
                     valor_rolagem=250
                     if carta_selecionada["nome"] == "Speed Boost":  # Se a carta selecionada for "Speed Boost"
-                        velocidade_personagem += 0.065  # Aumenta a velocidade do personagem em 2
+                        velocidade_personagem += 0.035  # Aumenta a velocidade do personagem em 2
                         cartas_compradas["Speed Boost"] += 1
                     elif carta_selecionada["nome"] == "Porção":
                         vida+=int(vida_maxima*0.45)
@@ -297,14 +296,14 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                         Valor_Bonus+=25
                         cartas_compradas["Coletora"] += 1   
 
-
-
-                    pausa = False  # Sai do loop quando a tecla ESPAÇO é pressionada
+                    compras_restantes -= 1  # diminui o contador
+                    if compras_restantes > 0:
+                        cartas_selecionadas = cartas_selecionadas = random.sample(cartas, 3)
                 elif evento.key == pygame.K_w:  # Exibe informações da carta
                     mostrar_info = True
-                elif valor_rolagem < pontuacao_exib  and evento.key == pygame.K_q:
-                    pontuacao_exib-=250
-                    valor_rolagem+= int(valor_rolagem*0.40)
+                elif Rolagens_possiveis > Rolagens_Dadas  and evento.key == pygame.K_q:
+                    print("Reroll dado")
+                    Rolagens_Dadas+=1
                     cartas_selecionadas = random.sample(cartas, 3)
 
             elif evento.type == pygame.KEYUP:
@@ -398,8 +397,6 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                         Mercenaria_Active=True
                         Valor_Bonus+=25
                         cartas_compradas["Coletora"] += 1   
-
-                    pausa = False  # Sai do loop quando a tecla ESPAÇO é pressionada
                 if evento.type == pygame.JOYBUTTONDOWN:
                     if evento.button == 2:  # Botão X do controle do Xbox
                         mostrar_info = True
@@ -457,13 +454,43 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                 
                 # Atualiza a posição X para a próxima carta
                 pos_x += 50  # Espaço entre as cartas  
-        render_texto_com_contorno(fonte_titulo, f"Pontuação: {pontuacao_exib}", cor_texto, cor_contorno, 450, 50)
+        # Reroll principal (centralizado)
+        texto_reroll = f"Reroll: {Rolagens_possiveis}"
+        largura_texto = fonte_titulo.render(texto_reroll, True, cor_texto).get_width()
+        render_texto_com_contorno(
+            fonte_titulo,
+            texto_reroll,
+            cor_texto,
+            cor_contorno,
+            (largura_tela - largura_texto) // 2,
+            50
+        )
 
-        # Renderizar "Valor da Rolagem"
-        render_texto_com_contorno(fonte_texto, f"Valor da Rolagem: {valor_rolagem}", cor_texto, cor_contorno, 450, 120)
+        # Compras restantes (centralizado)
+        texto_compras = f"Compras restantes: {compras_restantes}"
+        largura_texto = fonte_titulo.render(texto_compras, True, cor_texto).get_width()
+        render_texto_com_contorno(
+            fonte_titulo,
+            texto_compras,
+            cor_texto,
+            cor_contorno,
+            (largura_tela - largura_texto) // 2,
+            130
+        )
 
-        # Renderizar explicação menor
-        render_texto_com_contorno(fonte_pequena, "aumenta 40% do valor líquido (por rolagem)", cor_texto, cor_contorno, 450, 180)
+        # Reroll restantes (centralizado e menor)
+        texto_restantes = f"Reroll restantes ({Rolagens_possiveis - Rolagens_Dadas})"
+        fonte_reroll_restante = pygame.font.Font(None, 42)
+        largura_texto = fonte_reroll_restante.render(texto_restantes, True, cor_texto).get_width()
+        render_texto_com_contorno(
+            fonte_reroll_restante,
+            texto_restantes,
+            cor_texto,
+            cor_contorno,
+            (largura_tela - largura_texto) // 2,
+            200
+        )
+
 
         if mostrar_info:
             carta_selecionada = cartas_selecionadas[carta_selecionada_index]
@@ -500,6 +527,8 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
             for i, linha in enumerate(linhas):
                 texto_linha = fonte_pequena.render(linha.strip(), True, (0, 0, 0))
                 tela.blit(texto_linha, (pos_x_info + 10, pos_y_info + 35 + i * 18))
+
+        
         tela.blit(icone_q, posicao_icone_q)
         tela.blit(icone_rolagem, posicao_icone_rolagem)
         pygame.display.flip()
