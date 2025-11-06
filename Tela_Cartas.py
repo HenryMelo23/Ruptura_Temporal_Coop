@@ -206,7 +206,7 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
     fonte = pygame.font.Font(None, 20)
 
     pygame.display.set_caption("Cartas")
-    print(compras_restantes)
+
     while compras_restantes > 0:
         pos_x = largura_tela // 2 - (len(cartas_compradas) * 100) // 2  # centraliza as cartas
         pos_y = altura_tela - 90  
@@ -302,7 +302,6 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                 elif evento.key == pygame.K_w:  # Exibe informações da carta
                     mostrar_info = True
                 elif Rolagens_possiveis > Rolagens_Dadas  and evento.key == pygame.K_q:
-                    print("Reroll dado")
                     Rolagens_Dadas+=1
                     cartas_selecionadas = random.sample(cartas, 3)
 

@@ -29,7 +29,6 @@ if modo == "join":
     if ip_detectado:
         conn = conectar_ao_host(ip_detectado)
     else:
-        print("Nenhum host encontrado na rede.")
         pygame.quit()
         sys.exit()
 
@@ -1471,7 +1470,6 @@ while running:
                 
                 elif Dano_pos_resistencia_person > 0:
                     vida -= Dano_pos_resistencia_person
-                    print(dano_inimigo_perto)
                     if aurea == "Impulsiva":
                         eliminacoes_consecutivas_impulsiva = 0  # Perde streak se levar dano
 
@@ -2012,7 +2010,6 @@ while running:
                         pontuacao_exib += ganho
                         fila_envio.put({"pontuacao_atual": pontuacao_exib})
                         fila_envio.put({"crescimento_local": True})
-                        print("eliminação do host e enviou para que o client creça tambem, sincronização dos pontos...")
 
                         # Boss: aumento escalonado
                         if not boss_vivo1:

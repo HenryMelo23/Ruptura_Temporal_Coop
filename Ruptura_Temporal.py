@@ -198,7 +198,7 @@ def tela_escolha_modo():
                         if ip_digitado:
                             return "join", ip_digitado
                         else:
-                            print("Por favor, digite um IP válido antes de continuar.")
+                            pass
                     elif evento.key == pygame.K_BACKSPACE:
                         ip_digitado = ip_digitado[:-1]
                     elif evento.unicode.isdigit() or evento.unicode == ".":
