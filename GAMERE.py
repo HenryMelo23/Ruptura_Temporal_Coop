@@ -901,7 +901,7 @@ while running:
             fila_envio.put({"convite_boss": True})
 
         # --- Tempo limite do convite ---
-        if convite_boss_ativo and pygame.time.get_ticks() - convite_boss_tempo > 5000:
+        if convite_boss_ativo and pygame.time.get_ticks() - convite_boss_tempo > 5000:  
             convite_boss_ativo = False
             convite_boss_enviado = False
             convite_boss_recebido = False
@@ -1326,6 +1326,7 @@ while running:
                 # Verifica se o boss foi derrotado
                 if vida_boss <= 0:
                     boss_vivo1 = False
+                    fila_envio.put({"boss_morto": True})
                     vida_maxima_boss1 = 0
                     # Aplique os efeitos ou recompensas ao derrotar o boss aqui
         # Se o alvo atual morreu → mudar pro outro

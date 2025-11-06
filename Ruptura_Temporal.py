@@ -10,6 +10,7 @@ import os
 import json
 from Config_Teclas import tela_de_controles,carregar_config_teclas
 from Variaveis import largura_tela, altura_tela, python
+from rede import descobrir_host_udp
 
 pygame.init()
 pygame.mouse.set_visible(False)
@@ -123,22 +124,80 @@ def tela_escolha_modo():
                     elif evento.key == pygame.K_SPACE:  # ← espaço no lugar do enter
                         if opcoes[selecionado] == "Host Game":
                             return "host", None
-                        elif opcoes[selecionado] == "Offline":
-                            return "offline", None
+
                         elif opcoes[selecionado] == "Join Game":
-                            digitando_ip = True
-                            ip_digitado = ""
-                    elif evento.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
+                            # --- Tela de busca automática do host ---
+                            from rede import descobrir_host_udp  # importa a função
+
+                            procurando = True
+                            fonte_menor = pygame.font.Font("Texto/World.otf", 28)
+                            tempo_inicio = pygame.time.get_ticks()
+                            ip_encontrado = None
+                            mensagem_status = "Procurando host disponível na rede..."
+
+                            while procurando:
+                                tela.fill((15, 15, 15))
+
+                                # Texto principal
+                                texto = fonte.render(mensagem_status, True, (255, 255, 255))
+                                tela.blit(texto, (largura // 2 - texto.get_width() // 2, altura // 2 - 30))
+
+                                sub = fonte_menor.render(
+                                    "Aguarde alguns segundos ou pressione ESC para cancelar",
+                                    True,
+                                    (180, 180, 180)
+                                )
+                                tela.blit(sub, (largura // 2 - sub.get_width() // 2, altura // 2 + 30))
+
+                                pygame.display.flip()
+                                clock.tick(30)
+
+                                # Tenta detectar o host via broadcast UDP
+                                ip_encontrado = descobrir_host_udp(timeout=2)
+                                if ip_encontrado:
+                                    # Atualiza mensagem na tela
+                                    mensagem_status = f"Host encontrado em {ip_encontrado}"
+                                    tela.fill((15, 15, 15))
+                                    texto = fonte.render("[✅] Host encontrado!", True, (0, 255, 0))
+                                    ip_texto = fonte_menor.render(f"IP: {ip_encontrado}", True, (255, 255, 0))
+                                    tela.blit(texto, (largura // 2 - texto.get_width() // 2, altura // 2 - 40))
+                                    tela.blit(ip_texto, (largura // 2 - ip_texto.get_width() // 2, altura // 2 + 10))
+                                    pygame.display.flip()
+                                    pygame.time.delay(2000)
+                                    return "join", ip_encontrado  # retorna automaticamente
+
+                                # Sai após 10 segundos sem resposta
+                                if pygame.time.get_ticks() - tempo_inicio > 10000:
+                                    procurando = False
+
+                                for evento_busca in pygame.event.get():
+                                    if evento_busca.type == pygame.QUIT:
+                                        pygame.quit()
+                                        sys.exit()
+                                    elif evento_busca.type == pygame.KEYDOWN and evento_busca.key == pygame.K_ESCAPE:
+                                        procurando = False
+
+                            # Se não encontrou host
+                            fonte_erro = pygame.font.Font("Texto/World.otf", 32)
+                            tela.fill((15, 15, 15))
+                            msg_erro = fonte_erro.render("Nenhum host encontrado na rede.", True, (255, 80, 80))
+                            sub_erro = fonte_erro.render("Verifique se o host está ativo e tente novamente.", True, (200, 200, 200))
+                            tela.blit(msg_erro, (largura // 2 - msg_erro.get_width() // 2, altura // 2 - 20))
+                            tela.blit(sub_erro, (largura // 2 - sub_erro.get_width() // 2, altura // 2 + 40))
+                            pygame.display.flip()
+                            pygame.time.delay(3000)
+
+                        elif evento.key == pygame.K_ESCAPE:
+                            pygame.quit()
+                            sys.exit()
+
                 else:
-                    # Digitando IP
-                    if evento.key == pygame.K_SPACE:  # ← confirma com espaço
-                        # Quando o IP for digitado, então tenta conectar
-                        if ip_digitado:  # Verifica se o IP foi preenchido
-                            return "join", ip_digitado  # Chama a função com o IP preenchido
+                    # Mantém a parte de digitação de IP (caso ainda precise)
+                    if evento.key == pygame.K_SPACE:
+                        if ip_digitado:
+                            return "join", ip_digitado
                         else:
-                            print("Por favor, digite um IP válido antes de continuar.")  # Caso o IP esteja vazio
+                            print("Por favor, digite um IP válido antes de continuar.")
                     elif evento.key == pygame.K_BACKSPACE:
                         ip_digitado = ip_digitado[:-1]
                     elif evento.unicode.isdigit() or evento.unicode == ".":
