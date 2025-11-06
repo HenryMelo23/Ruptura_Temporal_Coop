@@ -804,7 +804,7 @@ while running:
                 
                 if "ping" in dados:
                     try:
-                        fila_envio.put({"pong": pygame.time.get_ticks()})
+                        fila_envio.put({"pong": dados["ping"]})  # devolve o mesmo tempo
                     except:
                         pass
                 if "p2" in dados:  # Recebe dados do cliente (jogador 2)
@@ -912,11 +912,10 @@ while running:
 
     elif modo == "join":
         # Medir ping: envia um pacote de teste e mede o tempo de resposta
-        if pygame.time.get_ticks() - tempo_envio_ping > 1000:  # mede a cada 1 segundo
-            
+        if pygame.time.get_ticks() - tempo_envio_ping > 1000:
             tempo_envio_ping = pygame.time.get_ticks()
             try:
-                fila_envio.put({"ping": True})
+                fila_envio.put({"ping": tempo_envio_ping})  # envia o tempo de envio
             except:
                 pass
 
@@ -956,11 +955,11 @@ while running:
                     ping_atual = pygame.time.get_ticks() - dados["pong"]
                     # Define a cor conforme o ping
                     if ping_atual < 80:
-                        cor_ping = (0, 255, 0)       # Verde
+                        cor_ping = (0, 255, 0)
                     elif ping_atual < 160:
-                        cor_ping = (255, 255, 0)     # Amarelo
+                        cor_ping = (255, 255, 0)
                     else:
-                        cor_ping = (255, 0, 0)       # Vermelho
+                        cor_ping = (255, 0, 0)
                 if "pontuacao_atual" in dados:
                     pontuacao_exib = dados["pontuacao_atual"]
                 if "abrir_loja" in dados:

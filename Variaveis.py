@@ -41,6 +41,7 @@ outro_jogador_morto = False
 alvo_atual = "host"  # inimigos começam perseguindo o host
 intervalo_troca_alvo = 20000  # 20 segundos
 tempo_ultima_troca_alvo= 0
+pos_x_player2, pos_y_player2= 0 , 0
 ########################################## VARIAVEIS MAPA
 cont=1
 if cont ==1:
@@ -56,7 +57,7 @@ convite_boss_recebido = False
 convite_boss_tempo = 0
 convite_boss_aceitou = False
 iniciar_boss = False
-vida_boss = 5000
+vida_boss = 50
 vida_maxima_boss1= vida_boss
 chefe_largura, chefe_altura = largura_tela * 0.2, altura_tela * 0.2
 pos_x_chefe, pos_y_chefe = largura_mapa // 2 - chefe_largura // 2, altura_mapa // 2 - chefe_altura // 2
