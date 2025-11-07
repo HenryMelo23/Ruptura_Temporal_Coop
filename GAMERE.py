@@ -8,10 +8,12 @@ import os
 import sys
 import json
 import threading
+import queue
 from Tela_Cartas import tela_de_pausa
 from rede import iniciar_host, conectar_ao_host,fila_envio,fila_recebimento,thread_envio,thread_recebimento, anunciar_host_udp, descobrir_host_udp
 from Variaveis import *
 from utils import *
+lock_inimigos = threading.Lock()
 
 
 with open("modo_jogo.json", "r") as f:
@@ -109,6 +111,99 @@ mensagens_iniciais = [
     
 ]
 
+def thread_atualizar_inimigos():
+    global inimigos_comum, alvo_x, alvo_y, direcao_alvo, velocidade_personagem
+    global movendo, tempo_anterior, tempo_movimento, tempo_parado
+    ultimo_tempo = time.time()
+    while True:
+        agora = time.time()
+        dt = agora - ultimo_tempo
+        ultimo_tempo = agora
+        if inimigos_comum:
+            with lock_inimigos:
+                try:
+                    if movendo:
+                        if tempo_atual - tempo_anterior >= tempo_movimento:
+                            tempo_anterior = tempo_atual
+                            movendo = False
+                            tempo_movimento = random.randint(3000, 7000)
+                        tempo_previsao = 5
+                        atualizar_movimento_inimigos(
+                            inimigos_comum, alvo_x, alvo_y, direcao_alvo, velocidade_personagem, tempo_previsao
+                        )
+                    else:
+                        if tempo_atual - tempo_anterior >= tempo_parado:
+                            tempo_anterior = tempo_atual
+                            movendo = True
+                            tempo_parado = random.randint(10, 3000)
+                except Exception as e:
+                    print("Erro na thread de inimigos:", e)
+        time.sleep(0.01)
+
+#Com o aumento de inimigos, o client apresentou lentidão já que com o aumento o envio de pacotes com a localização de inimigos aumenta e ficam pesados.
+def thread_processar_pacotes():
+    global inimigos_comum
+    global pos_x_player2, pos_y_player2, direcao_player2
+    global jogador_remoto_morto, host_ativo
+    while True:
+        try:
+            print("processo client")
+            dados = fila_recebimento.get()
+            if "p1" in dados:
+                pos_x_player2 = dados["p1"]["x"]
+                pos_y_player2 = dados["p1"]["y"]
+                direcao_player2 = dados["p1"].get("direcao", "down")
+                host_ativo = True  # Se o host enviou dados, o host está ativo
+                if "morto" in dados["p1"]:
+                    jogador_remoto_morto = dados["p1"]["morto"]
+            # --- Recebe e sincroniza inimigos ---
+            if "inimigos" in dados:
+                inimigos_recebidos = dados["inimigos"]
+
+                with lock_inimigos:
+                    # Ajusta o tamanho da lista conforme o host
+                    if len(inimigos_comum) < len(inimigos_recebidos):
+                        # adiciona os que faltam
+                        for i in range(len(inimigos_comum), len(inimigos_recebidos)):
+                            novo = criar_inimigo(
+                                inimigos_recebidos[i]["x"],
+                                inimigos_recebidos[i]["y"]
+                            )
+                            novo["vida"] = inimigos_recebidos[i]["vida"]
+                            novo["vida_maxima"] = inimigos_recebidos[i]["vida_max"]
+                            inimigos_comum.append(novo)
+
+                    elif len(inimigos_comum) > len(inimigos_recebidos):
+                        # remove os que sobraram
+                        inimigos_comum = inimigos_comum[:len(inimigos_recebidos)]
+
+                    # Atualiza todos os inimigos existentes
+                    for i, info in enumerate(inimigos_recebidos):
+                        inimigos_comum[i]["rect"].x = info["x"]
+                        inimigos_comum[i]["rect"].y = info["y"]
+                        inimigos_comum[i]["vida"] = info["vida"]
+                        inimigos_comum[i]["vida_maxima"] = info["vida_max"]
+
+
+
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print("Erro ao processar pacote:", e)
+
+if modo == "join":
+    
+    threading.Thread(target=thread_processar_pacotes, daemon=True).start()
+
+
+inimigos_comum = []
+#inicializa a Threading
+if modo == "host":
+    tempo_anterior = pygame.time.get_ticks()
+    tempo_movimento = random.randint(2000, 7000)
+    tempo_parado = random.randint(500, 700) 
+    movendo = True 
+    threading.Thread(target=thread_atualizar_inimigos, daemon=True).start()
 
 
 def gerar_posicao_aleatoria(largura_mapa, altura_mapa, largura_personagem, altura_personagem):
@@ -129,8 +224,10 @@ def solicitar_boss(tela, fila_envio, fila_recebimento, modo):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                running = False
                 pygame.quit()
                 sys.exit()
+
 
             # Jogador aceita ou recusa
             if convite_recebido and convite_ativo:
@@ -269,10 +366,8 @@ upgrade_aureas = carregar_upgrade_aureas("aureas_upgrade.json")
         
 tempo_inicial = time.time() 
 
-tempo_anterior = pygame.time.get_ticks()
-tempo_movimento = random.randint(2000, 7000)
-tempo_parado = random.randint(500, 700) 
-movendo = True 
+
+
 boss_vivo1=False
 relogio = pygame.time.Clock()
 ultimo_tempo_reducao = time.time()
@@ -332,8 +427,10 @@ def tela_de_espera(tela, fila_envio, fila_recebimento, modo):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                running = False
                 pygame.quit()
                 sys.exit()
+
 
         # Envia o estado de pronto
         if modo == "host":
@@ -389,9 +486,9 @@ def atualizar_posicao_personagem(keys, joystick):
         # Desenhe a sprite de teletransporte
         tela.blit(teleporte_sprites[teleporte_index], (pos_x_personagem, pos_y_personagem))
 
-        # Atualize a tela
-        pygame.display.flip()
-        pygame.time.delay(teleporte_duration // 2)  # Tempo de espera entre cada quadro (metade da duração)
+        if pygame.time.get_ticks() - tempo_ultimo_dash >= teleporte_duration // 2:
+            teleporte_index = (teleporte_index + 1) % len(teleporte_sprites)
+            tempo_ultimo_dash = pygame.time.get_ticks()
 
         # Continue com o código do dash como antes
         if ultima_tecla_movimento == 'up':
@@ -487,8 +584,9 @@ def atualizar_posicao_personagem(keys, joystick):
         tela.blit(teleporte_sprites[teleporte_index], (pos_x_personagem, pos_y_personagem))
 
         # Atualizar a tela
-        pygame.display.flip()
-        pygame.time.delay(teleporte_duration // 2)  # Tempo de espera entre cada quadro (metade da duração)
+        if pygame.time.get_ticks() - tempo_ultimo_dash >= teleporte_duration // 2:
+            teleporte_index = (teleporte_index + 1) % len(teleporte_sprites)
+            tempo_ultimo_dash = pygame.time.get_ticks()
 
         # Continuar com o código do dash como antes
         if ultima_tecla_movimento == 'up':
@@ -510,7 +608,7 @@ def atualizar_posicao_personagem(keys, joystick):
     
     return direcao_atual
 
-inimigos_comum = []
+
 
 
 
@@ -597,6 +695,7 @@ def aplicar_crescimento_personalizado():
     global vida_inimigo_maxima, Resistencia_petro, dano_inimigo_perto, dano_person_hit
     global vida_maxima_petro, dano_petro, dano_inimigo_longe, dano_boss
     global Dano_Boss_Habilit, Velocidade_Inimigos_1 , inimigos_eliminados
+    global max_inimigos
 
     vida_inimigo_maxima += 1.2 + nivel_ameaca * 0.8
     Resistencia_petro += 0.2 + nivel_ameaca * 0.1
@@ -609,6 +708,11 @@ def aplicar_crescimento_personalizado():
     Dano_Boss_Habilit += 0.05 + nivel_ameaca * 0.03
     Velocidade_Inimigos_1 += 0.0015 + nivel_ameaca * 0.0005
     inimigos_eliminados += 1
+
+    # ---- Crescimento balanceado do número máximo de inimigos ----
+    # A cada 30 eliminações aumenta em 1, até o limite de 12
+    if inimigos_eliminados % 30 == 0 and max_inimigos < 12:
+        max_inimigos += 1
 
 
 
@@ -643,7 +747,7 @@ def verificar_colisao_personagem_inimigo(personagem_rect, inimigos_rects):
     return False  # Sem colisão
 
 def soltar_moeda(posicao):
-    chance = 1 # Chance da moeda dropar 10%
+    chance = 0.10 # Chance da moeda dropar 10%
     if random.random() < chance:
         tamanho_moeda = (36, 36)  # Novo tamanho desejado
         sprite_redimensionada = pygame.transform.scale(sprite_moeda, tamanho_moeda)
@@ -959,22 +1063,7 @@ while running:
             dados = fila_recebimento.get()
             if dados:
                 
-                if "p1" in dados:
-                    pos_x_player2 = dados["p1"]["x"]
-                    pos_y_player2 = dados["p1"]["y"]
-                    direcao_player2 = dados["p1"].get("direcao", "down")
-                    host_ativo = True  # Se o host enviou dados, o host está ativo
-                    if "morto" in dados["p1"]:
-                        jogador_remoto_morto = dados["p1"]["morto"]
-                # --- Recebe e sincroniza inimigos ---
-                if "inimigos" in dados:
-                    inimigos_recebidos = dados["inimigos"]
-                    inimigos_comum = []
-                    for inimigo in inimigos_recebidos:
-                        novo = criar_inimigo(inimigo["x"], inimigo["y"])
-                        novo["vida"] = inimigo["vida"]
-                        novo["vida_maxima"] = inimigo["vida_max"]
-                        inimigos_comum.append(novo)
+                
                 if "pong" in dados:
                     ping_atual = pygame.time.get_ticks() - dados["pong"]
                     # Define a cor conforme o ping
@@ -1125,6 +1214,9 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            pygame.quit()
+            sys.exit()
+
         if not jogador_morto:  # Só permite se estiver vivo
             if botao_mouse[0] and tempo_atual - tempo_ultimo_disparo >= intervalo_disparo:  # Botão esquerdo do mouse
                 pos_mouse = pygame.mouse.get_pos()
@@ -1412,36 +1504,17 @@ while running:
         direcao_alvo = direcao_player2
 
     tempo_atual = pygame.time.get_ticks()
-    if movendo:
-        if tempo_atual - tempo_anterior >= tempo_movimento:
-            # Atualize o tempo anterior para o tempo atual
-            tempo_anterior = tempo_atual
-            movendo = False
-            tempo_movimento = random.randint(3000, 7000)
-        # Atualizar movimento dos inimigos com previsão
-        tempo_previsao = 5  # Tempo em quadros para prever o movimento
-        atualizar_movimento_inimigos(
-            inimigos_comum, alvo_x, alvo_y, direcao_alvo, velocidade_personagem, tempo_previsao
-        )
-
-    else:
-        if tempo_atual - tempo_anterior >= tempo_parado:
-            # Atualize o tempo anterior para o tempo atual
-            tempo_anterior = tempo_atual
-            movendo = True
-            tempo_parado = random.randint(10, 3000)
             
 
     
-
-
     # Desenhe os inimigos na tela
-    for inimigo in inimigos_comum:
-        inimigo["image"] = frames_inimigo[frame_atual % len(frames_inimigo)]
+    with lock_inimigos: # Evita ler enqaunto a threading escreve
+        for inimigo in inimigos_comum:
+            inimigo["image"] = frames_inimigo[frame_atual % len(frames_inimigo)]
 
-        tela.blit(inimigo["image"], inimigo["rect"])
-        desenhar_barra_de_vida(tela, inimigo["rect"].x, inimigo["rect"].y - 10, largura_inimigo, 5, inimigo["vida"], inimigo["vida_maxima"])
-    
+            tela.blit(inimigo["image"], inimigo["rect"])
+            desenhar_barra_de_vida(tela, inimigo["rect"].x, inimigo["rect"].y - 10, largura_inimigo, 5, inimigo["vida"], inimigo["vida_maxima"])
+        
     personagem_rect = pygame.Rect(pos_x_personagem, pos_y_personagem, largura_personagem*0.5, altura_personagem*0.8)
     inimigos_rects = [inimigo["rect"] for inimigo in inimigos_comum]
 
@@ -2385,7 +2458,7 @@ while running:
     tela.blit(cursor_imagem, (mouse_x, mouse_y))
     exibir_cronometro(tela)
     pygame.display.flip()
-    FPS.tick(100)  # Limita a 60 FPS
+    FPS.tick(100)  # Limita a 100 FPS
 
 
 # Encerrar o Pygame

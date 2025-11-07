@@ -42,6 +42,9 @@ alvo_atual = "host"  # inimigos começam perseguindo o host
 intervalo_troca_alvo = 20000  # 20 segundos
 tempo_ultima_troca_alvo= 0
 pos_x_player2, pos_y_player2= 0 , 0
+ultimo_envio_estado = time.time()
+intervalo_envio = 0.05  # envia a cada 50 ms (20 vezes por segundo)
+
 ########################################## VARIAVEIS MAPA
 cont=1
 if cont ==1:
@@ -303,9 +306,6 @@ elif largura_tela <= 1360:
     vel_inimig= 1
 Velocidade_Inimigos_1=1.3
 max_inimigos=6
-max_inimigos2=4
-max_inimigos3=5
-max_inimigos4=4
 distancia_minima_inimigos = 50  # Ajuste conforme necessário
 largura_inimigo, altura_inimigo = largura_tela*0.05, altura_tela*0.08
 frames_inimigo = [pygame.transform.scale(pygame.image.load("Sprites/inimig1.png"), (largura_inimigo, altura_inimigo)),
@@ -797,6 +797,7 @@ def calcular_posicao_prevista(pos_x, pos_y, direcao, velocidade, tempo_previsao)
         pos_x += velocidade * tempo_previsao
     return pos_x, pos_y
 
+
 def atualizar_movimento_inimigos(inimigos, pos_x_personagem, pos_y_personagem, direcao_jogador, velocidade_personagem, tempo_previsao):
     for inimigo in inimigos:
         # Calcular a posição prevista do jogador
@@ -812,6 +813,8 @@ def atualizar_movimento_inimigos(inimigos, pos_x_personagem, pos_y_personagem, d
         if distancia > 0:  # Evitar divisão por zero
             inimigo["rect"].x += (dx / distancia) * Velocidade_Inimigos_1
             inimigo["rect"].y += (dy / distancia) * Velocidade_Inimigos_1
+
+
 
 def calcular_angulo_disparo(posicao_jogador, posicao_mouse):
     dx = posicao_mouse[0] - posicao_jogador[0]
