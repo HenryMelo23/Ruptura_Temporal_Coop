@@ -9,7 +9,7 @@ import time
 
 def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo, altura_disparo,trembo,dano_person_hit,chance_critico,roubo_de_vida,quantidade_roubo_vida,
                   tempo_cooldown_dash,vida_maxima,Petro_active,Resistencia,vida_petro,vida_maxima_petro,dano_petro,xp_petro,petro_evolucao,Resistencia_petro,Chance_Sorte,Poison_Active,Dano_Veneno_Acumulado,Executa_inimigo,Ultimo_Estalo,mostrar_info,Mercenaria_Active,Valor_Bonus,dispositivo_ativo,Tempo_cura,
-                    porcentagem_cura,cartas_compradas,pontuacao_exib,max_cartas_compraveis=1):
+                    porcentagem_cura,cartas_compradas,pontuacao_exib,max_cartas_compraveis=1,inimigos_eliminados=inimigos_eliminados):
     Rolagens_possiveis = 3
     Rolagens_Dadas = 0
     compras_restantes = max_cartas_compraveis
@@ -61,26 +61,40 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
     
 
     atributos_cartas = [
-        {"nome": "Speed Boost", "Nick": "Vento Celeste", "velocidade": 10, "descricao": "Eles estão perto demais? Corra como o vento e ganhe +10% de velocidade (acumulativo)"},
-        {"nome": "Porção", "Nick": "Elixir Vital", "vida_maxima": 50, "descricao": "Precisa viver mais? Cure-se com 25% da vida máxima, excedente vira vida máxima."},
-        {"nome": "Disparo crescente", "Nick": "Impacto Escalante", "ataque": 20, "descricao": "Sua arma é uma piada? Pegue isso e ganhe +27 de dano para espantar o azar (acumulativo)."},
-        {"nome": "Tempestade", "Nick": "Tempestade Crescente", "Dano e chance critica": 5, "descricao": "Melhore sua arma com +2% crit e triplique o dano causado! A precisão reina aqui."},
-        {"nome": "Cura", "Nick": "Mordida Sombria", "Roubo de Vida": 10, "descricao": "Está complicado? Roubando 3% de vida por hit, 4% para ativar o efeito (acumulativo)."},
-        {"nome": "Trembo", "Nick": "Reversão Temporal", "segunda_vida": True, "descricao": "Quase morreu? O tempo volta, saúde cheia e você reaparece em outro lugar!"},
-        {"nome": "Speed Atack", "Nick": "Fluidez Letal", "Velocidade de Ataque": 5, "descricao": "Tiros lentos? Com +5% de velocidade de ataque, agora você mostra serviço (acumulativo)."},
-        {"nome": "Teleporte", "Nick": "Salto Espacial", "cooldown": 5, "descricao": "Posicionamento é tudo! Reduza em 3% o cooldown do teleporte para não arriscar."},
-        {"nome": "Petro", "Nick": "Sentinela Leal", "Amigo": True, "descricao": "Um guarda-costas pequeno, mas com potencial. Alimente-o e veja-o virar uma fera (acumulativo)."},
-        {"nome": "Defesa", "Nick": "Escudo Fásico", "Resistencia": 5, "descricao": "Os monstros estão fortes? Adicione +10 de defesa e mitigue seus ataques devastadores."},
-        {"nome": "Sorte", "Nick": "Anomalia Favorável", "Sorte": 2, "descricao": "Cartas repetidas? Aumente sua sorte com este trevo e melhore suas chances!"},
-    ]
-
-
+        {"nome": "Speed Boost", "Nick": "Vento Celeste", "velocidade": 10, 
+        "descricao": "Aumente sua velocidade em +10%. Corra como o vento e fuja de qualquer situação perigosa. (Aumento acumulativo)"},
         
-    atributos_cartas_raras = [
-        {"nome": "Poison", "Nick": "Resíduo Quase Letal","descricao": "A cada hit você envenena os inimigos, mas cuidado a toxina é QUASE mortal", "Poison": 0.5}, #Poison que deixa com 1 de vida
-        {"nome": "Coletora", "Nick": "Golpe de Misericórdia","descricao": "Quando esses animais estiverem com a vida baixa, de um fim neles, com essa carta os inimigos morrem quando estão com menos de 5% da vida maxima(acumulativo) "}, #Executa o inimigo com 5% de vida
-        {"nome": "Mercenaria", "Nick": "Caçadora de recompensa", "Sorte": 2, "descricao": " "},
+        {"nome": "Porção", "Nick": "Elixir Vital", "vida_maxima": 50, 
+        "descricao": "Recupere 25% da sua vida máxima e ganhe mais vida máxima permanentemente. Excedente vira vida máxima."},
+        
+        {"nome": "Disparo crescente", "Nick": "Impacto Escalante", "ataque": 20, 
+        "descricao": "Ganhe +27 de dano e deixe os inimigos temendo seus tiros poderosos. (Acumulativo com mais cartas)."},
+        
+        {"nome": "Tempestade", "Nick": "Tempestade Crescente", "Dano e chance critica": 5, 
+        "descricao": "Aumente sua chance crítica em 2% e triplique o dano causado. Transforme cada acerto em uma tempestade!"},
+
+        {"nome": "Cura", "Nick": "Mordida Sombria", "Roubo de Vida": 10, 
+        "descricao": "Restaure 3% da sua vida a cada hit e 4% a cada ativação. Recupere sua saúde enquanto luta!"},
+
+        {"nome": "Trembo", "Nick": "Reversão Temporal", "segunda_vida": True, 
+        "descricao": "Quando a morte se aproxima, o tempo volta. Recupere toda a sua saúde e reapareça em outro local!"},
+
+        {"nome": "Speed Atack", "Nick": "Fluidez Letal", "Velocidade de Ataque": 5, 
+        "descricao": "Aumente a velocidade de ataque em 5%, tornando seus tiros rápidos e letais. (Aumento acumulativo)"},
+        
+        {"nome": "Teleporte", "Nick": "Salto Espacial", "cooldown": 5, 
+        "descricao": "Reduza o cooldown do teleporte em 3%, permitindo que você se mova rapidamente entre os campos de batalha."},
+
+        {"nome": "Petro", "Nick": "Sentinela Leal", "Amigo": True, 
+        "descricao": "Desencadeie o poder de um pequeno guardião. Alimente-o para ver seu poder crescer e proteger você!"},
+
+        {"nome": "Defesa", "Nick": "Escudo Fásico", "Resistencia": 5, 
+        "descricao": "Aumente sua resistência em +5 e mitigue os danos dos inimigos. Uma defesa imbatível para cada desafio."},
+
+        {"nome": "Sorte", "Nick": "Anomalia Favorável", "Sorte": 2, 
+        "descricao": "Aumente suas chances de obter cartas raras com 2% de sorte adicional. A sorte agora está ao seu favor!"}
     ]
+
 
     # Carrega as imagens das seis cartas disponíveis
     cartas_disponiveis = [
@@ -96,11 +110,6 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
         pygame.image.load('Sprites/Deck/carta_defesa1.png'),# Um amigo para lhe ajudar na run
         pygame.image.load('Sprites/Deck/carta_sorte1.png')#Uma sorte cairia bem
          
-    ]
-    cartas_disponiveis_raras = [
-        pygame.image.load('Sprites/Deck/carta_poison1.png'),  # Um veneno pra fazer mal
-        pygame.image.load('Sprites/Deck/carta_estalo1.png'),  # Manopla Executavel
-        pygame.image.load('Sprites/Deck/carta_mercenaria1.png'),  # Manopla Executavel
     ]
 
     # Carrega os frames da animação das cartas
@@ -152,28 +161,12 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
 
     ]
 
-    frames_cartas_raras = [
-        [
-            pygame.image.load('Sprites/Deck/carta_poison1.png'),
-            pygame.image.load('Sprites/Deck/carta_poison2.png')
-        ],
-        [
-            pygame.image.load('Sprites/Deck/carta_estalo1.png'),
-            pygame.image.load('Sprites/Deck/carta_estalo2.png')
-        ],
-        [
-            pygame.image.load('Sprites/Deck/carta_mercenaria1.png'),
-            pygame.image.load('Sprites/Deck/carta_mercenaria2.png')
-        ],
-    ]
 
     # Ajusta o tamanho das cartas (opcional)
     largura_carta = 150
     altura_carta = 200
     cartas_disponiveis = [pygame.transform.scale(carta, (largura_carta, altura_carta)) for carta in cartas_disponiveis]
     frames_cartas = [[pygame.transform.scale(frame, (largura_carta, altura_carta)) for frame in frames] for frames in frames_cartas]
-    cartas_disponiveis_raras = [pygame.transform.scale(carta, (largura_carta, altura_carta)) for carta in cartas_disponiveis_raras]
-    frames_cartas_raras = [[pygame.transform.scale(frame, (largura_carta, altura_carta)) for frame in frames] for frames in frames_cartas_raras]
 
     # Associa cada carta a seus atributos e frames de animação
     cartas = []
@@ -181,13 +174,6 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
         carta = {"imagem": carta_img, "frames_animacao": frames_cartas[i], "frame_atual": 0}
         carta.update(atributos_cartas[i])
         cartas.append(carta)
-
-    
-    if random.random() < Chance_Sorte:  # 5% chance for a rare card
-        for i, carta_img in enumerate(cartas_disponiveis_raras):
-            carta_rara = {"imagem": carta_img, "frames_animacao": frames_cartas_raras[i], "frame_atual": 0}
-            carta_rara.update(atributos_cartas_raras[i])
-            cartas.append(carta_rara)
 
     # Select three cards randomly from the combined list
     cartas_selecionadas = random.sample(cartas, 3)
@@ -224,77 +210,79 @@ def tela_de_pausa(velocidade_personagem, intervalo_disparo,vida,largura_disparo,
                     carta_selecionada = cartas_selecionadas[carta_selecionada_index]
                     valor_rolagem=250
                     if carta_selecionada["nome"] == "Speed Boost":  # Se a carta selecionada for "Speed Boost"
-                        velocidade_personagem += 0.035  # Aumenta a velocidade do personagem em 2
+                        velocidade_personagem += 0.035 + (inimigos_eliminados // 50) * 0.005  # Aumenta a cada 50 inimigos
                         cartas_compradas["Speed Boost"] += 1
+
                     elif carta_selecionada["nome"] == "Porção":
-                        vida+=int(vida_maxima*0.45)
-                        vida_petro+=int(vida_maxima_petro*0.30)
+                        vida += int(vida_maxima * 0.45 + (inimigos_eliminados // 30) * 0.05)  # Aumenta conforme inimigos eliminados
+                        vida_petro += int(vida_maxima_petro * 0.30 + (inimigos_eliminados // 40) * 0.03)  # Aumenta conforme inimigos eliminados
                         if vida_petro > vida_maxima_petro:
-                            vida_maxima_petro= vida_petro
-                    elif carta_selecionada["nome"] == "Disparo crescente":
-                        dano_person_hit+=27
-                        cartas_compradas["Disparo crescente"] += 1
-                    elif carta_selecionada["nome"] == "Trembo":
-                        trembo=True
-                        Tempo_cura-= Tempo_cura*0.05
-                        porcentagem_cura+= 0.001
-                    elif carta_selecionada["nome"] == "Tempestade":
-                        dano_person_hit+= 10
-                        chance_critico+= 0.02
-                        cartas_compradas["Tempestade"] += 1
-                    elif carta_selecionada["nome"] == "Cura":
-                        roubo_de_vida+=0.04
-                        quantidade_roubo_vida+=0.03
-                        cartas_compradas["Cura"] += 1
-                    elif carta_selecionada["nome"] == "Speed Atack":
-                        intervalo_disparo-=20
-                        cartas_compradas["Speed Atack"] += 1
-                    elif carta_selecionada["nome"] == "Teleporte":
-                        tempo_cooldown_dash-= tempo_cooldown_dash*0.003
-                        cartas_compradas["Teleporte"] += 1
-                    elif carta_selecionada["nome"] == "Petro":
-                        Petro_active=True
-                        dano_petro+=2
+                            vida_maxima_petro = vida_petro
                         
-                        if petro_evolucao>0 and petro_evolucao<=8:
+
+                    elif carta_selecionada["nome"] == "Disparo crescente":
+                        dano_person_hit += 27 + (inimigos_eliminados // 50) * 10  # Aumenta o dano conforme inimigos são eliminados
+                        cartas_compradas["Disparo crescente"] += 1
+
+                    elif carta_selecionada["nome"] == "Trembo":
+                        trembo = True
+                        Tempo_cura -= Tempo_cura * 0.05
+                        porcentagem_cura += 0.001 + (inimigos_eliminados // 100) * 0.0005  # Aumenta a cura gradualmente
+                        
+
+                    elif carta_selecionada["nome"] == "Tempestade":
+                        dano_person_hit += 10 + (inimigos_eliminados // 50) * 4  # Aumenta o dano conforme inimigos são eliminados
+                        chance_critico += 0.02 + (inimigos_eliminados // 100) * 0.005  # Aumenta a chance crítica
+                        cartas_compradas["Tempestade"] += 1
+
+                    elif carta_selecionada["nome"] == "Cura":
+                        roubo_de_vida += 0.04 + (inimigos_eliminados // 80) * 0.01  # Aumenta o roubo de vida conforme inimigos eliminados
+                        quantidade_roubo_vida += 0.03 + (inimigos_eliminados // 80) * 0.005  # Aumenta a quantidade de roubo de vida
+                        cartas_compradas["Cura"] += 1
+
+                    elif carta_selecionada["nome"] == "Speed Atack":
+                        intervalo_disparo -= 20 + (inimigos_eliminados // 100) * 5  # A cada 100 inimigos, diminui 5 de intervalo
+                        if intervalo_disparo < 50:
+                            intervalo_disparo = 50  # Limita o intervalo de disparo
+                        cartas_compradas["Speed Atack"] += 1
+
+                    elif carta_selecionada["nome"] == "Teleporte":
+                        tempo_cooldown_dash -= tempo_cooldown_dash * 0.003 + (inimigos_eliminados // 50) * 0.0005  # A cada 50 inimigos, diminui mais o tempo de cooldown
+                        if tempo_cooldown_dash < 0.5:
+                            tempo_cooldown_dash = 0.5  # Limita o cooldown do teleporte
+                        cartas_compradas["Teleporte"] += 1
+
+                    elif carta_selecionada["nome"] == "Petro":
+                        Petro_active = True
+                        dano_petro += 2 + (inimigos_eliminados // 30) * 1  # Aumenta o dano do petro conforme inimigos eliminados
+                        if petro_evolucao > 0 and petro_evolucao <= 8:
                             xp_petro = "nivel_1"
-                            
-                            petro_evolucao+=4     
-                        elif petro_evolucao>8 and petro_evolucao<=16:
+                            petro_evolucao += 4
+                        elif petro_evolucao > 8 and petro_evolucao <= 16:
                             xp_petro = "nivel_2"
-                            vida_maxima_petro+=1000
-                            
-                            petro_evolucao+=4   
-                        elif petro_evolucao>16  :
+                            vida_maxima_petro += 1000
+                            petro_evolucao += 4
+                        elif petro_evolucao > 16:
                             xp_petro = "nivel_3"
-                            vida_maxima_petro+=2000
-                            Resistencia_petro+=18
-                            dano_petro+=250
-                            
-                              
+                            vida_maxima_petro += 2000
+                            Resistencia_petro += 18
+                            dano_petro += 250
                         if vida_petro < vida_maxima_petro:
-                            vida_petro+=int(vida_maxima_petro*0.45)
-                            if vida_petro > vida_maxima_petro:
-                                vida_maxima_petro= vida_petro
+                            vida_petro += int(vida_maxima_petro * 0.45)
+                        if vida_petro > vida_maxima_petro:
+                            vida_maxima_petro = vida_petro
                         cartas_compradas["Petro"] += 1
+
                     elif carta_selecionada["nome"] == "Defesa":
-                        Resistencia+=3.5
+                        Resistencia += 3.5 + (inimigos_eliminados // 50) * 0.5  # Aumenta a resistência conforme inimigos eliminados
+                        if Resistencia > 50:
+                            Resistencia = 50  # Limita a resistência
                         cartas_compradas["Defesa"] += 1
+
                     elif carta_selecionada["nome"] == "Sorte":
-                        Chance_Sorte+=0.01
+                        Chance_Sorte += 0.01 + (inimigos_eliminados // 100) * 0.002  # Aumenta a sorte conforme inimigos eliminados
                         cartas_compradas["Sorte"] += 1
-                    elif carta_selecionada["nome"] == "Poison":
-                        Poison_Active=True
-                        Dano_Veneno_Acumulado+=0.05
-                        cartas_compradas["Poison"] += 1
-                    elif carta_selecionada["nome"] == "Coletora":
-                        Executa_inimigo+=0.005
-                        Ultimo_Estalo= True
-                        cartas_compradas["Coletora"] += 1   
-                    elif carta_selecionada["nome"] == "Mercenaria":
-                        Mercenaria_Active=True
-                        Valor_Bonus+=25
-                        cartas_compradas["Coletora"] += 1   
+
 
                     compras_restantes -= 1  # diminui o contador
                     if compras_restantes > 0:
