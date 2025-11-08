@@ -35,6 +35,7 @@ if modo == "join":
         sys.exit()
 
 
+
 # se não conectou, encerra
 if conn is None:
     pygame.quit()
@@ -284,7 +285,7 @@ def solicitar_boss(tela, fila_envio, modo):
             convite_boss_ativo = True
             convite_boss_tempo = pygame.time.get_ticks()
             fila_envio.put({"convite_boss": True})
-            print("[Host] Convite de boss enviado.")
+            
 
     while True:
         for event in pygame.event.get():
@@ -985,7 +986,6 @@ while running:
             dados = fila_recebimento.get()
             if dados:
                 if "game_over" in dados and dados["game_over"]:
-                    print("[Rede] Cliente sinalizou fim de jogo. Encerrando no host.")
                     estado_jogo = "game_over"
                 
                 if "ping" in dados:
@@ -1627,15 +1627,27 @@ while running:
         # Desenha sprite de caído
         tela.blit(sprite_morto, (pos_x_personagem, pos_y_personagem))
 
-        # Mostra contagem regressiva
-        segundos_restantes = max(0, (tempo_revive - pygame.time.get_ticks()) // 1000)
+        
+        # Calcula o tempo restante para reviver em segundos
+        segundos_restantes = max(0, (tempo_revive - (tempo_passado_morte // 1000)))  # tempo_revive é em segundos
         texto_timer = fonte_mensagem.render(f"Revive em {segundos_restantes}s", True, (255, 80, 80))
         tela.blit(texto_timer, (pos_x_personagem - 20, pos_y_personagem - 40))
 
         # ⚙️ 1️⃣ Se o tempo de revival acabou e o outro jogador está morto → Game Over
-        if modo == "join":
-            if jogador_morto and jogador_remoto_morto:
-                print("enviado game over")
+        if jogador_morto:
+            # Calcula o tempo passado desde a morte do jogador
+            tempo_passado_morte = pygame.time.get_ticks() - tempo_morte
+
+            # Desenha a sprite do jogador morto
+            tela.blit(sprite_morto, (pos_x_personagem, pos_y_personagem))
+
+            # Calcula o tempo restante para reviver em segundos
+            segundos_restantes = max(0, (tempo_revive - (tempo_passado_morte // 1000)))  # tempo_revive é em segundos
+            texto_timer = fonte_mensagem.render(f"Revive em {segundos_restantes}s", True, (255, 80, 80))
+            tela.blit(texto_timer, (pos_x_personagem - 20, pos_y_personagem - 40))
+
+            # ⚙️ 1️⃣ Se o tempo de revival acabou e o outro jogador também está morto → Game Over
+            if modo == "join" and jogador_remoto_morto:
                 fila_envio.put({"game_over": True})
                 mostrar_tutorial = False
                 pygame.time.delay(2000)
@@ -1646,9 +1658,18 @@ while running:
                 limpar_salvamento()
                 subprocess.run([python, "Game_Over.py"])
                 sys.exit()
+
+            # ⚙️ 2️⃣ Se o tempo de revival acabou, mas o outro jogador está vivo → revive
+            elif tempo_passado_morte >= tempo_revive * 1000 and not jogador_remoto_morto:
+                vida = vida_maxima // 2  # O jogador revive com metade da vida máxima
+                jogador_morto = False  # O jogador revive
+                sprite_atual = frames_animacao["down"][0]  # Restaura o sprite original do jogador
+
+                # Enviar para o host que o jogador reviveu
+                if modo == "join":
+                    fila_envio.put({"reviver": True})
         if modo == "host":
             if estado_jogo == "game_over" or not running:
-                print("encerrado")
                 mostrar_tutorial = False
                 pygame.time.delay(2000)
                 Musica_tema_fases.stop()
@@ -1658,13 +1679,16 @@ while running:
                 limpar_salvamento()
                 subprocess.run([python, "Game_Over.py"])
                 sys.exit()
-
-
-        # ⚙️ 2️⃣ Se o tempo acabou mas o outro sobreviveu → revive
-        elif tempo_passado_morte >= tempo_revive and not outro_jogador_morto:
-            vida = vida_maxima // 2
-            jogador_morto = False
-            sprite_atual = frames_animacao["down"][0]
+        # No lado do host, quando o jogador renasce
+        if modo == "host":
+            if jogador_morto and tempo_passado_morte >= tempo_revive * 1000:
+                jogador_morto = False  # O jogador revive
+                # Definir a posição e outras variáveis, se necessário
+                pos_x_personagem = largura_mapa // 2
+                pos_y_personagem = altura_mapa // 2
+                vida = vida_maxima // 2  # O jogador renasce com metade da vida
+                sprite_atual = frames_animacao["down"][0]  # Restabelece o sprite
+        
 
 
     # Adicione esta verificação para controlar o piscar da barra de vida

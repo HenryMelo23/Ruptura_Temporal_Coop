@@ -35,7 +35,7 @@ host_ativo = False  # Variável para verificar se o host está ativo
 cliente_ativo = False  # Variável para verificar se o cliente está ativo
 jogador_morto = False
 tempo_morte = 0
-tempo_revive = 15000  # 15 segundos
+tempo_revive = 15  # 15 segundos
 jogador_remoto_morto = False  # <-- adiciona isso antes do loop principal
 outro_jogador_morto = False
 alvo_atual = "host"  # inimigos começam perseguindo o host
@@ -733,6 +733,8 @@ def desenhar_barra_de_vida_petro(surface, vida_petro, pos_x, pos_y,vida_maxima_p
     
     # Desenhando a borda da barra de vida (preta)
     pygame.draw.rect(surface, (0, 0, 0), (pos_x, pos_y, largura_barra_petro, altura_barra_petro), 2)    
+
+
 
 ###################################################  SONS UNIVERSAIS ################################################
 
