@@ -984,6 +984,9 @@ while running:
         while not fila_recebimento.empty():
             dados = fila_recebimento.get()
             if dados:
+                if "game_over" in dados and dados["game_over"]:
+                    print("[Rede] Cliente sinalizou fim de jogo. Encerrando no host.")
+                    estado_jogo = "game_over"
                 
                 if "ping" in dados:
                     try:
@@ -1630,16 +1633,32 @@ while running:
         tela.blit(texto_timer, (pos_x_personagem - 20, pos_y_personagem - 40))
 
         # ⚙️ 1️⃣ Se o tempo de revival acabou e o outro jogador está morto → Game Over
-        if tempo_passado_morte >= tempo_revive and outro_jogador_morto:
-            mostrar_tutorial = False
-            pygame.time.delay(2000)
-            Musica_tema_fases.stop()
-            Som_tema_fases.stop()
-            tela_upgrade_aureas(tela, fonte, moedas_coletadas)
-            pygame.quit()
-            limpar_salvamento()
-            subprocess.run([python, "Game_Over.py"])
-            sys.exit()
+        if modo == "join":
+            if jogador_morto and jogador_remoto_morto:
+                print("enviado game over")
+                fila_envio.put({"game_over": True})
+                mostrar_tutorial = False
+                pygame.time.delay(2000)
+                Musica_tema_fases.stop()
+                Som_tema_fases.stop()
+                tela_upgrade_aureas(tela, fonte, moedas_coletadas)
+                pygame.quit()
+                limpar_salvamento()
+                subprocess.run([python, "Game_Over.py"])
+                sys.exit()
+        if modo == "host":
+            if estado_jogo == "game_over" or not running:
+                print("encerrado")
+                mostrar_tutorial = False
+                pygame.time.delay(2000)
+                Musica_tema_fases.stop()
+                Som_tema_fases.stop()
+                tela_upgrade_aureas(tela, fonte, moedas_coletadas)
+                pygame.quit()
+                limpar_salvamento()
+                subprocess.run([python, "Game_Over.py"])
+                sys.exit()
+
 
         # ⚙️ 2️⃣ Se o tempo acabou mas o outro sobreviveu → revive
         elif tempo_passado_morte >= tempo_revive and not outro_jogador_morto:

@@ -88,7 +88,29 @@ while running:
                 elif buttons[selected_button] == "Voltar para o Menu":
                     import Ruptura_Temporal
                 elif buttons[selected_button] == "Tentar Novamente":
+                    import json
+                    from rede import iniciar_host, conectar_ao_host
+
+                    # Lê o modo e IP salvos
+                    with open("modo_jogo.json", "r") as f:
+                        dados = json.load(f)
+
+                    modo = dados["modo"]
+                    ip = dados["ip"]
+
+                    # Recria a conexão conforme o modo
+                    if modo == "host":
+                        conn = iniciar_host()
+                    elif modo == "join" and ip:
+                        conn = conectar_ao_host(ip)
+
+                    # Quando conectado, inicia o jogo novamente
                     import GAMERE
+                    GAMERE.modo = modo
+                    if modo == "join":
+                        GAMERE.ip_host = ip
+                    GAMERE.conn = conn
+
 
     # Desenha botões
     window.blit(background_image, (0, 0))  # Redesenha o fundo
