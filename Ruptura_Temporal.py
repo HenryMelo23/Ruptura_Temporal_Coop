@@ -72,7 +72,7 @@ titulo_jogo = "Ruptura Temporal"
 posicao_titulo = (largura_tela // 2, altura_tela // 8)
 
 # Adicionando a nova opção de Configuração
-opcoes = ["Iniciar Jornada", "Configuração", "Escolher Conexão", "Sair"]
+opcoes = ["Iniciar Jornada", "Configuração", "Sair"]
 indice_selecionado = 0
 
 DELAY_ENTRE_OPCOES = 100
@@ -98,189 +98,6 @@ else:
 
 # Variável para controlar movimento do analógico
 analogo_movido = False
-
-def tela_escolher_conexao():
-    opcoes_conexao = ["LAN (Local)", "Internet (Aberta)"]
-    selecionado = 0
-    clock = pygame.time.Clock()
-
-    while True:
-        tela.fill((15, 15, 15))
-
-        # Eventos
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_UP or evento.key == pygame.K_w:
-                    selecionado = (selecionado - 1) % len(opcoes_conexao)
-                elif evento.key == pygame.K_DOWN or evento.key == pygame.K_s:
-                    selecionado = (selecionado + 1) % len(opcoes_conexao)
-                elif evento.key == pygame.K_SPACE or evento.key == pygame.K_RETURN:
-                    if opcoes_conexao[selecionado] == "LAN (Local)":
-                        tipo_conexao = "local"
-                    elif opcoes_conexao[selecionado] == "Internet (Aberta)":
-                        tipo_conexao = "aberta"
-
-                    # Salvar a escolha do tipo de conexão
-                    with open("tipo_conexao.json", "w") as file:
-                        json.dump({"conexao": tipo_conexao}, file)
-
-                    # Após salvar, retornamos o tipo de conexão
-                    return tipo_conexao  # Retorna o tipo de conexão escolhido
-
-        # Desenho do menu de escolha de conexão
-        titulo = pygame.font.Font("Texto/World.otf", 36).render("Escolha o Tipo de Conexão", True, (255, 255, 255))
-        tela.blit(titulo, (largura_tela // 2 - titulo.get_width() // 2, altura_tela // 6))
-
-        for i, texto in enumerate(opcoes_conexao):
-            cor = (255, 255, 255) if i == selecionado else (120, 120, 120)
-            render = pygame.font.Font("Texto/World.otf", 36).render(texto, True, cor)
-            tela.blit(render, (largura_tela // 2 - render.get_width() // 2, altura_tela // 3 + i * 70))
-
-        pygame.display.flip()
-        clock.tick(60)
-
-def carregar_tipo_conexao():
-    try:
-        with open("tipo_conexao.json", "r") as file:
-            data = json.load(file)
-            return data.get("conexao")
-    except FileNotFoundError:
-        return "local"  # Se o arquivo não existir, retornar 'local' por padrão
-
-
-def tela_escolha_modo_internet():
-    tipo_conexao = carregar_tipo_conexao()  # Carregar tipo de conexão
-
-    pygame.init()
-    largura, altura = largura_tela, altura_tela
-    tela = pygame.display.set_mode((largura, altura))
-    pygame.display.set_caption("Escolher Modo de Jogo")
-    fonte = pygame.font.Font("Texto/World.otf", 36)
-    clock = pygame.time.Clock()
-
-    opcoes = ["Host Game", "Join Game", "Offline"]
-    selecionado = 0
-    ip_digitado = ""
-    digitando_ip = False
-    token = None  # Variável para armazenar o token gerado
-    tempo_exibicao_token = 0  # Tempo de exibição do token
-    token_exibido = False  # Controle para saber se o token foi exibido
-    largura_quadro = 500  # Largura da caixa de texto do cliente
-    altura_quadro = 40  # Altura da caixa de texto do cliente
-    botao_copiar = pygame.Rect(largura // 2 + 100, altura // 2 - 20, 100, 40)  # Botão para copiar o token
-
-    while True:
-        tela.fill((15, 15, 15))
-
-        # Eventos
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif evento.type == pygame.KEYDOWN:
-                if not digitando_ip:
-                    if evento.key in [pygame.K_UP, pygame.K_w]:
-                        selecionado = (selecionado - 1) % len(opcoes)
-                    elif evento.key in [pygame.K_DOWN, pygame.K_s]:
-                        selecionado = (selecionado + 1) % len(opcoes)
-                    elif evento.key == pygame.K_SPACE:  # ← espaço no lugar do enter
-                        if opcoes[selecionado] == "Host Game":
-                            session_token = str(uuid.uuid4())  # Gera o token
-                            print(f"Token gerado: {session_token}")  # Exibe o token no console (para ser copiado)
-                            
-                            fonte_token = pygame.font.Font("Texto/World.otf", 28)
-                            token_texto = fonte_token.render(f"Token: {session_token}", True, (255, 255, 0))
-
-                            # Exibe o token na tela por 5 segundos
-                            tempo_exibicao_token = pygame.time.get_ticks()
-                            token_exibido = True
-
-                            # O host pode pressionar CTRL + C para copiar o token
-                            if botao_copiar.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0]:
-                                pyperclip.copy(session_token)  # Copia o token para a área de transferência
-                                print(f"Token copiado para a área de transferência: {session_token}")
-                                
-                            if tipo_conexao == "aberta":  # Se for conexão aberta
-                                # Registrar IP no servidor (Render) e retornar o token
-                                return "host", session_token
-                            else:
-                                return "host", session_token  # Para o tipo local
-
-                        elif opcoes[selecionado] == "Join Game":
-                            # Cliente pede o token e tenta se conectar
-                            ip_digitado = ""  # Reset input IP
-                            digitando_ip = True
-                            # Mostrar campo para o cliente digitar o token
-                            while digitando_ip:
-                                for evento_entrada in pygame.event.get():
-                                    if evento_entrada.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-                                    elif evento_entrada.type == pygame.KEYDOWN:
-                                        if evento_entrada.key == pygame.K_RETURN:
-                                            return "join", ip_digitado
-                                        elif evento_entrada.key == pygame.K_BACKSPACE:
-                                            ip_digitado = ip_digitado[:-1]
-                                        elif evento_entrada.key == pygame.K_v and pygame.key.get_pressed()[pygame.K_LCTRL]:  # Ctrl + V
-                                            # Colar o conteúdo da área de transferência usando pyperclip
-                                            ip_digitado += pyperclip.paste()  # Recupera o conteúdo do clipboard (copiado)
-                                        elif evento_entrada.key == pygame.K_z and pygame.key.get_pressed()[pygame.K_LCTRL]:  # Ctrl + Z
-                                            ip_digitado = ""  # Limpar o campo de digitação
-                                        elif evento_entrada.unicode.isalnum():
-                                            ip_digitado += evento_entrada.unicode
-
-                                # Desenha a tela
-                                tela.fill((15, 15, 15))
-                                campo_texto = fonte.render(f"Digite o token:", True, (255, 255, 255))
-                                tela.blit(campo_texto, (largura // 2 - campo_texto.get_width() // 2, altura // 2 - 40))
-                                
-                                # Limita o número de caracteres exibidos
-                                max_chars = largura_quadro // fonte.size("a")[0]
-                                if len(ip_digitado) > max_chars:
-                                    ip_digitado = ip_digitado[:max_chars]
-                                    
-                                token_digitado = fonte.render(ip_digitado, True, (255, 255, 255))
-                                tela.blit(token_digitado, (largura // 2 - token_digitado.get_width() // 2, altura // 2))
-                                pygame.display.flip()
-
-                            # Após digitar o token, tenta conectar
-                            return "join", ip_digitado
-
-                        elif evento.key == pygame.K_ESCAPE:
-                            pygame.quit()
-                            sys.exit()
-
-        # Exibe o token por 5 segundos sem travar o loop
-        if token_exibido and pygame.time.get_ticks() - tempo_exibicao_token < 5000:
-            tela.fill((15, 15, 15))  # Limpa a tela
-            fonte_token = pygame.font.Font("Texto/World.otf", 28)
-            token_texto = fonte_token.render(f"Token: {session_token}", True, (255, 255, 0))
-            tela.blit(token_texto, (largura // 2 - token_texto.get_width() // 2, altura // 2 - 20))
-            
-            # Desenho do botão de copiar
-            pygame.draw.rect(tela, (0, 255, 0), botao_copiar)
-            texto_botao = fonte.render("Copiar", True, (255, 255, 255))
-            tela.blit(texto_botao, (botao_copiar.x + 10, botao_copiar.y + 10))
-            pygame.display.flip()
-
-        # Desenho do menu
-        titulo = fonte.render("Selecione o modo de jogo", True, (255, 255, 255))
-        tela.blit(titulo, (largura // 2 - titulo.get_width() // 2, altura // 6))
-
-        for i, texto in enumerate(opcoes):
-            cor = (255, 255, 255) if i == selecionado else (120, 120, 120)
-            render = fonte.render(texto, True, cor)
-            tela.blit(render, (largura // 2 - render.get_width() // 2, altura // 3 + i * 70))
-
-        pygame.display.flip()
-        clock.tick(60)
-
-
-
-
 
 
 def tela_escolha_modo():
@@ -558,15 +375,8 @@ while True:  # Loop principal do menu
                             mostrar_tutorial = json.load(f)["mostrar_tutorial"]
 
                     tela_selecao_aurea(tela, fonte)
-
-                    # Chama a função que retorna o tipo de conexão
-                    tipo_conexao = tela_escolher_conexao()
-
-                    if tipo_conexao == "local":
-                        modo, ip = tela_escolha_modo()  # Chama a função de escolha do modo local
-                    elif tipo_conexao == "aberta":
-                        print("Conexão aberta")
-                        modo, ip = tela_escolha_modo_internet()  # Chama a nova função para conexão aberta
+                    modo, ip = tela_escolha_modo()  # Chama a função de escolha do modo local
+                    
 
                     pygame.mixer.music.stop()
 
@@ -582,10 +392,7 @@ while True:  # Loop principal do menu
                 elif indice_selecionado == 1:  # Configuração de Controles
                     config_teclas = carregar_config_teclas()
                     tela_de_controles(config_teclas, largura_tela, altura_tela)
-                if indice_selecionado == 2:  # Escolher Conexão
-                    tipo_conexao = tela_escolher_conexao()
-                    print(f"Tipo de Conexão escolhido: {tipo_conexao}")
-                elif indice_selecionado == 3:
+                elif indice_selecionado == 2:
                     pygame.mixer.music.stop()
                     pygame.quit()
                     sys.exit()
