@@ -1484,12 +1484,6 @@ while running:
             
         except:
             pass
-
-        
-    
-        
-
-
     
     if modo == "host":
         for inimigo in inimigos_comum:
