@@ -3,6 +3,9 @@ import queue
 import socket
 import json
 import time
+import requests
+
+RENDER_SERVER = "https://servidor-matchmaking-gsmh.onrender.com"
 
 fila_envio = queue.Queue()
 fila_recebimento = queue.Queue()
@@ -161,3 +164,30 @@ def conectar_ao_host(ip, porta=5050):
     return s
 
 
+def registrar_ip_host_online(ip_local, porta=5050):
+    """Registra o IP do host no servidor intermediário e recebe um token."""
+    try:
+        resp = requests.post(f"{RENDER_SERVER}/registrar", json={"ip": ip_local})
+        if resp.status_code == 200:
+            return resp.json().get("token")
+        else:
+            print("Erro ao registrar host:", resp.text)
+            return None
+    except Exception as e:
+        print("Erro de conexão com servidor:", e)
+        return None
+
+
+def obter_ip_host_online(token):
+    """Cliente usa token para obter o IP público do host."""
+    try:
+        resp = requests.post(f"{RENDER_SERVER}/conectar", json={"token": token})
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("ip"), data.get("porta")
+        else:
+            print("Erro ao obter IP:", resp.text)
+            return None, None
+    except Exception as e:
+        print("Erro de conexão com servidor:", e)
+        return None, None
