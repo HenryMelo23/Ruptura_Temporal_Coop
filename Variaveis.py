@@ -22,48 +22,18 @@ cooldown_concluido_img = pygame.transform.scale(pygame.image.load("Sprites/coold
 r_press=False
 dispositivo_ativo = "teclado"
 
-# Variáveis de conexão (para medir ping) e qualquer outra variavel para rede
-ultimo_ping = 0
-ping_atual = 0
-tempo_envio_ping = 0
-cor_ping = (0, 255, 0)
-loja_aberta = False
-esperando_outro_host = False
-esperando_outro_join = False
-ja_enviado_sair_espera = False
-host_ativo = False  # Variável para verificar se o host está ativo
-cliente_ativo = False  # Variável para verificar se o cliente está ativo
-jogador_morto = False
-tempo_morte = 0
-tempo_revive = 15  # 15 segundos
-jogador_remoto_morto = False  # <-- adiciona isso antes do loop principal
-outro_jogador_morto = False
-alvo_atual = "host"  # inimigos começam perseguindo o host
-intervalo_troca_alvo = 20000  # 20 segundos
-tempo_ultima_troca_alvo= 0
-pos_x_player2, pos_y_player2= 0 , 0
-ultimo_envio_estado = time.time()
-intervalo_envio = 0.05  # envia a cada 50 ms (20 vezes por segundo)
-ultima_vida_enviada= 0
-pronto_para_comecar= False
-estado_jogo= "Rodando"
-conn = None  # <- adiciona isso no topo, antes dos ifs
+
+
 ########################################## VARIAVEIS MAPA
 cont=1
 if cont ==1:
-    largura_tela, altura_tela = int(1360*0.8), int(768)
+    largura_tela, altura_tela = int(1360*0.8), int(768*1)
     largura_mapa, altura_mapa = largura_tela, altura_tela
     cont+=1
 centro_horizontal_tela = largura_mapa // 2
 espacamento = 100
 ########################################## BOSS 1
-convite_boss_ativo = False
-convite_boss_enviado = False
-convite_boss_recebido = False
-convite_boss_tempo = 0
-convite_boss_aceitou = False
-iniciar_boss = False
-vida_boss = 5800
+vida_boss = 5000
 vida_maxima_boss1= vida_boss
 chefe_largura, chefe_altura = largura_tela * 0.2, altura_tela * 0.2
 pos_x_chefe, pos_y_chefe = largura_mapa // 2 - chefe_largura // 2, altura_mapa // 2 - chefe_altura // 2
@@ -113,6 +83,147 @@ imagens_ataque = [
 tempo_ataque_especial = 0
 intervalo_troca = 850  # 2 segundos para trocar entre as imagens
 hitboxes = {}
+########################################## BOSS 2
+
+chefe_largura2, chefe_altura2 = largura_tela * 0.2, altura_tela * 0.3
+pos_x_chefe2, pos_y_chefe2 = largura_mapa // 1.1 - chefe_largura // 2, altura_mapa // 2 - chefe_altura // 1
+tempo_animacao_chefe2 = 1000  # Tempo em milissegundos entre cada quadro
+tempo_passado_animacao_chefe2 = 0
+frame_atual_chefe = 0
+frames_chefe2_1 = [
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_1.png"), (chefe_largura2, chefe_altura2)),
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_2.png"), (chefe_largura2, chefe_altura2))
+]
+frames_chefe2_2 = [
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_1.png"), (chefe_largura2, chefe_altura2)),
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_2.png"), (chefe_largura2, chefe_altura2))
+]
+frames_chefe2_3 = [
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_1.png"), (chefe_largura2, chefe_altura2)),
+    pygame.transform.scale(pygame.image.load("Sprites/Boss2_2.png"), (chefe_largura2, chefe_altura2))
+]
+
+frames_chefe2_4 = [
+    pygame.transform.scale(pygame.image.load("Sprites/peça.png"), (32, 32)),
+    pygame.transform.scale(pygame.image.load("Sprites/peça2.png"), (32, 32))
+]
+frame_porcentagem=frames_chefe2_1
+boss_vivo2=True
+vida_boss2 = 8000
+vida_maxima_boss2= vida_boss2
+largura_barra_boss2 = 20
+altura_barra_boss2 = 200
+pos_x_barra_boss2 = largura_mapa - 30
+pos_y_barra_boss2 = altura_tela // 4 - altura_barra_boss // 1.3
+
+########################################## BOSS 4
+boss_vivo4=True
+zonas_nulas = []
+contador_colisoes = 0
+vida_planeta=150
+# Organizando os frames do Boss em uma lista
+chefe_largura4, chefe_altura4 = largura_tela * 0.2, altura_tela * 0.3
+
+
+# Posição do boss (canto direito, centro vertical
+frames_chefe4_1 = [
+    pygame.transform.scale(pygame.image.load("Sprites/Boss4_1.png"), (chefe_largura4, chefe_altura4)), 
+    pygame.transform.scale(pygame.image.load("Sprites/Boss4_3.png"), (chefe_largura4, chefe_altura4))
+]
+
+
+frames_vortex = [
+    pygame.image.load("Sprites/Vortex1_1.png"),
+    pygame.image.load("Sprites/Vortex1_2.png")
+]
+
+sprite_disparo_boss = [
+    pygame.transform.scale(pygame.image.load("Sprites/Planet1_1.png"), (100, 100)),
+    pygame.transform.scale(pygame.image.load("Sprites/Planet1_2.png"), (100, 100))
+]
+
+# Índice do frame atual da galáxia
+indice_frame_vortex = 0
+
+# Tempo de troca de frame da galáxia
+intervalo_frame_vortex = 500  # Troca a cada 500 ms
+
+
+estado_boss_atacando = False
+tempo_ataque = 0  
+current_frame_index = 0
+
+boss_rect = frames_chefe4_1[current_frame_index].get_rect()
+
+boss_rect.center = (largura_tela - boss_rect.width // 2, altura_tela // 2)
+
+pos_x_boss4 = largura_tela - chefe_largura4  # Alinha à direita
+pos_y_boss4 = altura_tela // 3 # Centraliza no eixo Y
+
+last_frame_change = pygame.time.get_ticks()
+frame_interval = 1000 
+
+rect_boss = pygame.Rect(pos_x_boss4, pos_y_boss4, chefe_largura4, chefe_altura4)
+current_frame_disparo_boss = 0
+tempo_frame_disparo_boss = 0  # Para controlar a troca de frames
+intervalo_frame_disparo_boss = 200  # Intervalo em milissegundos
+
+projetil_lista = []
+
+ultimo_disparo = pygame.time.get_ticks()
+intervalo_disparo_Boss_4 = 6000 
+
+
+vida_boss4 = 10000
+vida_maxima_boss4 = vida_boss4
+largura_barra_boss4 = 20
+altura_barra_boss4 = 200
+pos_x_barra_boss4 = largura_mapa - 30
+pos_y_barra_boss4 = altura_tela // 2 - altura_barra_boss4 // 2
+def calcular_posicao_boss(boss_rect):
+    # Posição central do Boss
+    pos_x_boss = boss_rect.centerx
+    pos_y_boss = boss_rect.centery
+    return pos_x_boss, pos_y_boss
+
+tempo_ultimo_dano_vortex = 0 
+
+
+# Altura e quantidade de sprites
+altura_sprite_disparo_boss2 = 10
+quantidade_sprites_boss2 = 16
+linha = pygame.image.load("Sprites/Onda_Boss2.png")
+ataque_vertical_ativo = False
+posicao_ataque_vertical = (0, 0)
+velocidade_ataque_vertical = 2  
+tempo_espera_ataque = 3000  # Tempo em milissegundos (1 segundo)
+tempo_cooldown_dano_vertical = 1000  # Tempo de cooldown em milissegundos
+tempo_ultimo_dano_vertical = pygame.time.get_ticks()  # Inicializa o tempo do último dano
+largura_ataque_vertical = 20 
+altura_ataque_vertical = 100 
+
+tempo_inicio_dano_horizontal= pygame.time.get_ticks()  # Inicializa o tempo do último dano
+
+tempo_ultimo_dano_horizontal = pygame.time.get_ticks()  # Inicializa o tempo do último dano
+ataque_horizontal_ativo = False
+tempo_cooldown_dano_horizontal = 1000  # Tempo de cooldown em milissegundos
+posicao_ataque_horizontal = (0, 0)
+velocidade_ataque_horizontal = 1
+tempo_inicio_ataque_horizontal = 0
+altura_ataque_horizontal=20
+# Inicialize as variáveis relacionadas ao tempo antes do loop principal do jogo
+tempo_inicio_ataque_vertical = 0
+tempo_inicio_ataque_horizontal = 0
+
+############################################ Boss 3
+vida_boss3 = 20000
+vida_maxima_boss3=vida_boss3
+largura_barra_boss3 = 20
+altura_barra_boss3 = 200
+pos_x_barra_boss3 = largura_mapa - 30
+pos_y_barra_boss3 = altura_tela // 4 - altura_barra_boss // 1.3
+Boss_vivo3=True
+
 
 #########################################  Condicionais
 # Variável para armazenar a pontuação
@@ -168,6 +279,9 @@ elif largura_tela <= 1360:
     vel_inimig= 1
 Velocidade_Inimigos_1=1.3
 max_inimigos=6
+max_inimigos2=4
+max_inimigos3=5
+max_inimigos4=4
 distancia_minima_inimigos = 50  # Ajuste conforme necessário
 largura_inimigo, altura_inimigo = largura_tela*0.05, altura_tela*0.08
 frames_inimigo = [pygame.transform.scale(pygame.image.load("Sprites/inimig1.png"), (largura_inimigo, altura_inimigo)),
@@ -183,7 +297,6 @@ frames_inimigo_direita2 = [pygame.transform.scale(pygame.image.load("Sprites/ini
 
 ######################################### PERSONAGEM
 direcao_atual = 'stop'  # Direção inicial
-direcao_atual_p2 = 'stop'  # Direção inicial
 largura_personagem, altura_personagem = largura_tela*0.05, altura_tela*0.08
 pos_x_personagem, pos_y_personagem = 100, 100
 Resistencia=35
@@ -232,10 +345,6 @@ frames_onda_cinetica = [
     pygame.transform.scale(frame, (largura_onda, altura_onda)) for frame in frames_onda_cinetica
 ]
 
-sprite_morto = pygame.image.load("Sprites/morto.png")
-sprite_morto = pygame.transform.scale(sprite_morto, (largura_personagem, altura_personagem))
-
-
 personagem_paths = {
     'up': ["Sprites/Geo1-up.png", "Sprites/Geo2-up.png"],
     'down': ["Sprites/Geo1-Down.png", "Sprites/Geo2-Down.png"],
@@ -243,14 +352,6 @@ personagem_paths = {
     'right': ["Sprites/Geo1-Dir.png", "Sprites/Geo2-Dir.png"],
     'stop': ["Sprites/Geo1-somb.png", "Sprites/Geo2-somb.png"],
     'disp' :["Sprites/Geo_Disp1.png", "Sprites/Geo_Disp2.png"]
-}
-personagem_paths2 = {
-    'up': ["Sprites/Henry_Up0.png", "Sprites/Henry_Up1.png"],
-    'down': ["Sprites/Henry_Dir0.png", "Sprites/Henry_Dir1.png"],
-    'left': ["Sprites/Henry_Esq0.png", "Sprites/Henry_Esq1.png"],
-    'right': ["Sprites/Henry_Dir0.png", "Sprites/Henry_Dir1.png"],
-    'stop': ["Sprites/Henry_Stop0.png", "Sprites/Henry_Stop1.png"],
-    'disp' :["Sprites/Henry_Stop0.png", "Sprites/Henry_Stop1.png"]
 }
 
 trembo_paths = {
@@ -293,7 +394,6 @@ Petro_paths3 = {
 
 Petro_active=False
 
-######################################### CONFIGURAÇÕES GERAIS
 tempo_animacao_stop = 700
 tempo_animacao_no_stop = 300   # Tempo em milissegundos entre cada quadro
 cooldown_dash = False
@@ -334,12 +434,7 @@ frames_animacao = {direcao: [pygame.transform.scale(frame, (largura_personagem, 
 frames_animacao['stop'] = [pygame.image.load(path) for path in personagem_paths['stop']]
 frames_animacao['stop'] = [pygame.transform.scale(frame, (largura_personagem, altura_personagem)) for frame in frames_animacao['stop']]
 
-# Carregar as sequências de imagens do personagem
-frames_animacao2 = {direcao: [pygame.image.load(path) for path in paths] for direcao, paths in personagem_paths2.items()}
-frames_animacao2 = {direcao: [pygame.transform.scale(frame, (largura_personagem, altura_personagem)) for frame in frames] for direcao, frames in frames_animacao2.items()}
-# Adicionar uma entrada para 'stop' no dicionário
-frames_animacao2['stop'] = [pygame.image.load(path) for path in personagem_paths2['stop']]
-frames_animacao2['stop'] = [pygame.transform.scale(frame, (largura_personagem, altura_personagem)) for frame in frames_animacao2['stop']]
+
 ###############################################
 
 # Carregar as sequências de imagens do trembo
@@ -465,6 +560,8 @@ cartas_compradas = {
     "Petro": 0,
     "Defesa": 0,
     "Sorte": 0,
+    "Poison":0,
+    "Coletora":0,
 }
 cartas_imagens = {
     "Speed Boost": pygame.image.load('Sprites/Deck/Speed_boost1.png'),
@@ -476,6 +573,8 @@ cartas_imagens = {
     "Petro": pygame.image.load('Sprites/Deck/carta_petro1.png'),
     "Defesa": pygame.image.load('Sprites/Deck/carta_defesa1.png'),
     "Sorte": pygame.image.load('Sprites/Deck/carta_sorte1.png'),
+    "Poison": pygame.image.load('Sprites/Deck/carta_poison1.png'),
+    "Coletora": pygame.image.load('Sprites/Deck/carta_estalo1.png'),
 }
 cartas_disponiveis_nomes = [
     "Speed Boost", 
@@ -487,6 +586,8 @@ cartas_disponiveis_nomes = [
     "Petro", 
     "Defesa",
     "Sorte",
+    "Poison",
+    "Coletora",
 ]
 area_cartas = pygame.Rect(largura_tela // 4 - (len(cartas_compradas) * 100) // 2, altura_tela - 150, len(cartas_compradas) * 100, 100)
 cartas_visiveis = True
@@ -653,7 +754,6 @@ def calcular_posicao_prevista(pos_x, pos_y, direcao, velocidade, tempo_previsao)
         pos_x += velocidade * tempo_previsao
     return pos_x, pos_y
 
-
 def atualizar_movimento_inimigos(inimigos, pos_x_personagem, pos_y_personagem, direcao_jogador, velocidade_personagem, tempo_previsao):
     for inimigo in inimigos:
         # Calcular a posição prevista do jogador
@@ -669,8 +769,6 @@ def atualizar_movimento_inimigos(inimigos, pos_x_personagem, pos_y_personagem, d
         if distancia > 0:  # Evitar divisão por zero
             inimigo["rect"].x += (dx / distancia) * Velocidade_Inimigos_1
             inimigo["rect"].y += (dy / distancia) * Velocidade_Inimigos_1
-
-
 
 def calcular_angulo_disparo(posicao_jogador, posicao_mouse):
     dx = posicao_mouse[0] - posicao_jogador[0]
@@ -734,8 +832,6 @@ def desenhar_barra_de_vida_petro(surface, vida_petro, pos_x, pos_y,vida_maxima_p
     
     # Desenhando a borda da barra de vida (preta)
     pygame.draw.rect(surface, (0, 0, 0), (pos_x, pos_y, largura_barra_petro, altura_barra_petro), 2)    
-
-
 
 ###################################################  SONS UNIVERSAIS ################################################
 
