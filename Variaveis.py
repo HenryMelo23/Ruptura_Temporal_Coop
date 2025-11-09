@@ -47,6 +47,7 @@ intervalo_envio = 0.05  # envia a cada 50 ms (20 vezes por segundo)
 ultima_vida_enviada= 0
 pronto_para_comecar= False
 estado_jogo= "Rodando"
+conn = None  # <- adiciona isso no topo, antes dos ifs
 ########################################## VARIAVEIS MAPA
 cont=1
 if cont ==1:

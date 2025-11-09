@@ -20,8 +20,6 @@ with open("modo_jogo.json", "r") as f:
     dados = json.load(f)
 modo = dados["modo"]
 ip = dados["ip"]
-conn = None
-
 
 
 if modo == "host":
@@ -36,31 +34,9 @@ elif modo == "join":
         pygame.quit()
         sys.exit()
 
-# ----------------------------
-# NOVOS MODOS ONLINE
-# ----------------------------
-elif modo == "host_online":
-    import socket
-    s = socket.socket()
-    s.bind(("0.0.0.0", 5050))
-    s.listen(1)
-    print("[ONLINE] Esperando conexão do cliente...")
-    conn, addr = s.accept()
-    print(f"[ONLINE] Cliente conectado de {addr}")
-
-elif modo == "join_online":
-    import socket
-    s = socket.socket()
-    s.connect((ip, 5050))
-    conn = s
-    print(f"[ONLINE] Conectado ao host {ip}")
-
-
-
-
 # se não conectou, encerra
+
 if conn is None:
-    print("[ERRO] Nenhuma conexão de rede ativa — encerrando jogo.")
     pygame.quit()
     sys.exit()
 
@@ -173,10 +149,10 @@ def thread_processar_pacotes():
     while True:
         try:
             dados = fila_recebimento.get()
-            if modo == "join" or modo == "join_online" and "host_ready" in dados and dados["host_ready"]:
+            if modo == "join" and "host_ready" in dados and dados["host_ready"]:
                 esperando_client = False
 
-            if modo == "host" or modo == "host_online" and "join_ready" in dados and dados["join_ready"]:
+            if modo == "host"  and "join_ready" in dados and dados["join_ready"]:
                 esperando_host = False
             if "abrir_loja" in dados:
                 if dados["abrir_loja"]:
@@ -274,14 +250,14 @@ def thread_processar_pacotes():
         except Exception as e:
             print("Erro ao processar pacote:", e)
 
-if modo == "join" or modo == "join_online":
+if modo == "join":
     
     threading.Thread(target=thread_processar_pacotes, daemon=True).start()
 
 
 inimigos_comum = []
 #inicializa a Threading
-if modo == "host" or modo == "host_online":
+if modo == "host" :
     tempo_anterior = pygame.time.get_ticks()
     tempo_movimento = random.randint(2000, 7000)
     tempo_parado = random.randint(500, 700) 
@@ -301,7 +277,7 @@ def solicitar_boss(tela, fila_envio, modo):
     clock = pygame.time.Clock()
 
     # Se o jogador for host, ele inicia o convite com R
-    if modo == "host"or modo == "host_online":
+    if modo == "host":
         keys = pygame.key.get_pressed()
         if keys[pygame.K_r]:
             convite_boss_recebido = False
@@ -978,7 +954,7 @@ while running:
 
 
     #################################### Conexão Host ou cliente
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         # --- Atualiza e envia estado completo para o cliente ---
         estado = {
             "p1": {
@@ -1131,7 +1107,7 @@ while running:
 
 
 
-    elif modo == "join" or modo == "join_online":
+    elif modo == "join":
         # Medir ping: envia um pacote de teste e mede o tempo de resposta
         if pygame.time.get_ticks() - tempo_envio_ping > 1000:
             tempo_envio_ping = pygame.time.get_ticks()
@@ -1296,9 +1272,9 @@ while running:
     ultimo_x = pos_x_personagem
     ultimo_y = pos_y_personagem
     if not jogador_morto:
-        if modo == "host" or modo == "host_online":
+        if modo == "host" :
             direcao_atual = atualizar_posicao_personagem(keys, joystick)
-        elif modo == "join" or modo == "join_online":
+        elif modo == "join":
             direcao_atual_p2 = atualizar_posicao_personagem(keys, joystick)
     else:
         # Jogador morto não pode se mover
@@ -1316,7 +1292,7 @@ while running:
 
      # Adicionar inimigos a cada 10 segundos
     tempo_atual = pygame.time.get_ticks()
-    if modo == "host" or modo == "host_online":  # Apenas o host pode gerar inimigos
+    if modo == "host" :  # Apenas o host pode gerar inimigos
         if mostrar_tutorial:
             if (
                 tempo_atual > 23000
@@ -1406,7 +1382,7 @@ while running:
 
 
 
-    if modo == "join" or modo == "join_online":
+    if modo == "join":
         novas_ondas = []
         for onda in ondas:
             onda["rect"].x += velocidade_onda * math.cos(onda["angulo"])
@@ -1440,7 +1416,7 @@ while running:
 
         
 
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         novas_ondas = []
         for onda in ondas:
             onda["rect"].x += velocidade_onda * math.cos(onda["angulo"])
@@ -1511,7 +1487,7 @@ while running:
         except:
             pass
     
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         for inimigo in inimigos_comum:
             # Se o alvo atual morreu, força troca imediata
             if alvo_atual == "host" and jogador_morto and not jogador_remoto_morto:
@@ -1670,7 +1646,7 @@ while running:
             tela.blit(texto_timer, (pos_x_personagem - 20, pos_y_personagem - 40))
 
             # ⚙️ 1️⃣ Se o tempo de revival acabou e o outro jogador também está morto → Game Over
-            if modo == "join" or modo == "join_online" and jogador_remoto_morto:
+            if modo == "join" and jogador_remoto_morto:
                 fila_envio.put({"game_over": True})
                 mostrar_tutorial = False
                 pygame.time.delay(2000)
@@ -1689,9 +1665,9 @@ while running:
                 sprite_atual = frames_animacao["down"][0]  # Restaura o sprite original do jogador
 
                 # Enviar para o host que o jogador reviveu
-                if modo == "join" or modo == "join_online":
+                if modo == "join":
                     fila_envio.put({"reviver": True})
-        if modo == "host" or modo == "host_online":
+        if modo == "host" :
             if estado_jogo == "game_over" or not running:
                 mostrar_tutorial = False
                 pygame.time.delay(2000)
@@ -1703,7 +1679,7 @@ while running:
                 subprocess.run([python, "Game_Over.py"])
                 sys.exit()
         # No lado do host, quando o jogador renasce
-        if modo == "host" or modo == "host_online":
+        if modo == "host" :
             if jogador_morto and tempo_passado_morte >= tempo_revive * 1000:
                 jogador_morto = False  # O jogador revive
                 # Definir a posição e outras variáveis, se necessário
@@ -1771,7 +1747,7 @@ while running:
     ###############################################
 
     # HOST (jogador 1 local)
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         # --- Desenha o próprio personagem ---
         if jogador_morto:
             tela.blit(sprite_morto, (pos_x_personagem, pos_y_personagem))
@@ -1789,7 +1765,7 @@ while running:
                 tela.blit(frames_animacao2["down"][frame_atual], (pos_x_player2, pos_y_player2))
 
     # JOIN (jogador 2 local)
-    elif modo == "join" or modo == "join_online":
+    elif modo == "join":
         # --- Desenha o próprio personagem ---
         if jogador_morto:
             tela.blit(sprite_morto, (pos_x_personagem, pos_y_personagem))
@@ -1990,7 +1966,7 @@ while running:
         tempo_passado_animacao_chefe = 0
 
     # --- LÓGICA DO BOSS (somente host controla) ---
-    if modo == "host" or modo == "host_online" and boss_vivo1:
+    if modo == "host"  and boss_vivo1:
         tempo_passado_animacao_chefe += relogio.get_rawtime()
         if tempo_passado_animacao_chefe >= tempo_animacao_chefe:
             tempo_passado_animacao_chefe = 0
@@ -2090,7 +2066,7 @@ while running:
                 "fase": porcentagem_vida_boss  # ou use porcentagem_vida_boss
             }
         })
-    if modo == "join" or modo == "join_online" and boss_vivo1:
+    if modo == "join" and boss_vivo1:
         for idx, disparo in enumerate(disparos[:]):
             rect_disparo = disparo["rect"]
             rect_boss = pygame.Rect(pos_x_chefe, pos_y_chefe, chefe_largura, chefe_altura)
@@ -2101,7 +2077,7 @@ while running:
                 except:
                     pass
                 disparos.remove(disparo)
-    if modo == "join" or modo == "join_online" and boss_vivo1:
+    if modo == "join" and boss_vivo1:
         for idx, onda in enumerate(ondas[:]):
             rect_onda = onda["rect"]
             rect_boss = pygame.Rect(pos_x_chefe, pos_y_chefe, chefe_largura, chefe_altura)
@@ -2113,7 +2089,7 @@ while running:
                     pass
                 ondas.remove(onda)
     # --- DESENHAR NO CLIENT ---
-    if modo == "join" or modo == "join_online" and boss_vivo1:
+    if modo == "join" and boss_vivo1:
         tela.blit(frame_porcentagem[frame_atual_chefe], (pos_x_chefe, pos_y_chefe))
         desenhar_barra_de_vida(
             tela,
@@ -2125,7 +2101,7 @@ while running:
             vida_maxima_boss1
         )
 
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         for inimigo in inimigos_comum:
             inimigo_rect = inimigo["rect"]
             inimigo_image = inimigo["image"]
@@ -2211,7 +2187,7 @@ while running:
             if pontuacao_exib > pontuacao_magia:
                 pontuacao_magia = min(pontuacao_exib, maxima_pontuacao_magia)
     
-    if modo == "join" or modo == "join_online":
+    if modo == "join":
         for inimigo in inimigos_comum:
             inimigo_rect = inimigo["rect"]
             inimigo_image = inimigo["image"]
@@ -2253,7 +2229,7 @@ while running:
                     tempo_texto_dano = pygame.time.get_ticks()
                     disparos.remove(disparo)  # Remover o disparo após colisão
                     # Notifica o host se for client
-                    if modo == "join" or modo == "join_online":
+                    if modo == "join":
                         try:
                             idx = inimigos_comum.index(inimigo)
                             fila_envio.put({"hit": idx})
@@ -2283,7 +2259,7 @@ while running:
     total_cartas_compradas = sum(cartas_compradas.values())
     custo_carta_atual = custo_base_carta + (total_cartas_compradas * custo_por_carta)
     # Verifica se a pontuação atingiu 1500 e se o jogador pressionou 'Q'
-    if modo == "host" or modo == "host_online":
+    if modo == "host" :
         if (not jogador_remoto_morto) and (pontuacao_exib >= custo_carta_atual) and (keys[config_teclas["Comprar na loja"]] or (joystick and joystick.get_button(3))):
             # Calcula quantas cartas o jogador pode comprar
             max_cartas = pontuacao_exib // custo_carta_atual
@@ -2537,7 +2513,7 @@ while running:
     for moeda in moedas_soltadas:
         tela.blit(moeda["image"], moeda["rect"])
     # Exibir ping no canto superior direito
-    if modo == "join" or modo == "join_online":  # apenas o cliente precisa ver o ping
+    if modo == "join":  # apenas o cliente precisa ver o ping
         fonte_ping = pygame.font.Font(None, 32)
         texto_ping = fonte_ping.render(f"Ping: {ping_atual} ms", True, cor_ping)
         tela.blit(texto_ping, (largura_mapa - texto_ping.get_width() - 20, 40))

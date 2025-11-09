@@ -13,7 +13,7 @@ import uuid
 import pyperclip
 from Config_Teclas import tela_de_controles,carregar_config_teclas
 from Variaveis import largura_tela, altura_tela, python
-from rede import descobrir_host_udp, conectar_ao_host,obter_ip_host_online, registrar_ip_host_online
+from rede import descobrir_host_udp, conectar_ao_host
 
 
 pygame.init()
@@ -102,8 +102,7 @@ analogo_movido = False
 
 def tela_escolha_modo():
     import socket, pyperclip
-    from rede import descobrir_host_udp, registrar_ip_host_online, obter_ip_host_online
-
+    from rede import descobrir_host_udp
     pygame.init()
     largura, altura = largura_tela, altura_tela
     tela = pygame.display.set_mode((largura, altura))
@@ -113,33 +112,7 @@ def tela_escolha_modo():
 
     opcoes = ["Host Game", "Join Game", "Offline"]
     selecionado = 0
-
-    def escolher_tipo_rede(titulo):
-        """Submenu para escolher LAN ou Online"""
-        subopcoes = ["LAN", "Online", "Voltar"]
-        sel = 0
-        while True:
-            tela.fill((15, 15, 15))
-            titulo_texto = fonte.render(titulo, True, (255, 255, 255))
-            tela.blit(titulo_texto, (largura // 2 - titulo_texto.get_width() // 2, altura // 4))
-            for i, txt in enumerate(subopcoes):
-                cor = (255, 255, 0) if i == sel else (180, 180, 180)
-                render = fonte.render(txt, True, cor)
-                tela.blit(render, (largura // 2 - render.get_width() // 2, altura // 2 + i * 60))
-            pygame.display.flip()
-            clock.tick(60)
-            for e in pygame.event.get():
-                if e.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif e.type == pygame.KEYDOWN:
-                    if e.key in [pygame.K_UP, pygame.K_w]:
-                        sel = (sel - 1) % len(subopcoes)
-                    elif e.key in [pygame.K_DOWN, pygame.K_s]:
-                        sel = (sel + 1) % len(subopcoes)
-                    elif e.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                        return subopcoes[sel]
-
+    
     while True:
         tela.fill((15, 15, 15))
         titulo = fonte.render("Selecione o modo de jogo", True, (255, 255, 255))
@@ -168,84 +141,21 @@ def tela_escolha_modo():
                     # MODO HOST
                     # -----------------------------
                     if escolha == "Host Game":
-                        tipo = escolher_tipo_rede("Escolha o tipo de conexão:")
-                        if tipo == "LAN":
-                            return "host", None
-                        elif tipo == "Online":
-                            ip_local = socket.gethostbyname(socket.gethostname())
-                            token = registrar_ip_host_online(ip_local)
-                            if token:
-                                pyperclip.copy(token)
-                                tela.fill((15, 15, 15))
-                                msg1 = fonte.render("Token gerado!", True, (0, 255, 0))
-                                msg2 = fonte.render(f"Token: {token[:8]}...", True, (255, 255, 0))
-                                msg3 = fonte.render("Copiado para área de transferência.", True, (180, 180, 180))
-                                tela.blit(msg1, (largura // 2 - msg1.get_width() // 2, altura // 2 - 60))
-                                tela.blit(msg2, (largura // 2 - msg2.get_width() // 2, altura // 2))
-                                tela.blit(msg3, (largura // 2 - msg3.get_width() // 2, altura // 2 + 60))
-                                pygame.display.flip()
-                                pygame.time.delay(6000)
-                                return "host_online", None
-                            else:
-                                tela.fill((15, 15, 15))
-                                msg = fonte.render("Falha ao registrar host online.", True, (255, 80, 80))
-                                tela.blit(msg, (largura // 2 - msg.get_width() // 2, altura // 2))
-                                pygame.display.flip()
-                                pygame.time.delay(3000)
+                        return "host", None
 
                     # -----------------------------
                     # MODO JOIN
                     # -----------------------------
                     elif escolha == "Join Game":
-                        tipo = escolher_tipo_rede("Escolha o tipo de conexão:")
-                        if tipo == "LAN":
-                            ip_encontrado = descobrir_host_udp(timeout=5)
-                            if ip_encontrado:
-                                return "join", ip_encontrado
-                            else:
-                                tela.fill((15, 15, 15))
-                                msg = fonte.render("Nenhum host LAN encontrado.", True, (255, 80, 80))
-                                tela.blit(msg, (largura // 2 - msg.get_width() // 2, altura // 2))
-                                pygame.display.flip()
-                                pygame.time.delay(3000)
-                        elif tipo == "Online":
-                            token = ""
-                            digitando = True
-                            while digitando:
-                                tela.fill((15, 15, 15))
-                                txt = fonte.render("Digite o token do host:", True, (255, 255, 255))
-                                tela.blit(txt, (largura // 2 - txt.get_width() // 2, altura // 3))
-                                render_token = fonte.render(token, True, (255, 255, 0))
-                                tela.blit(render_token, (largura // 2 - render_token.get_width() // 2, altura // 2))
-                                pygame.display.flip()
-
-                                for e in pygame.event.get():
-                                    if e.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-                                    elif e.type == pygame.KEYDOWN:
-                                        if e.key == pygame.K_RETURN:
-                                            ip, porta = obter_ip_host_online(token)
-                                            if ip:
-                                                return "join_online", ip
-                                            else:
-                                                tela.fill((15, 15, 15))
-                                                msg = fonte.render("Token inválido ou expirado.", True, (255, 80, 80))
-                                                tela.blit(msg, (largura // 2 - msg.get_width() // 2, altura // 2))
-                                                pygame.display.flip()
-                                                pygame.time.delay(3000)
-                                                digitando = False
-                                        elif e.key == pygame.K_BACKSPACE:
-                                            token = token[:-1]
-                                        # Detecta Ctrl+V
-                                        elif e.key == pygame.K_v and (pygame.key.get_mods() & pygame.KMOD_CTRL):
-                                            colado = pyperclip.paste()
-                                            if colado:
-                                                token += colado.strip()
-
-                                        # Digitação normal
-                                        elif e.unicode.isalnum() or e.unicode in "-_":
-                                            token += e.unicode
+                        ip_encontrado = descobrir_host_udp(timeout=5)
+                        if ip_encontrado:
+                            return "join", ip_encontrado
+                        else:
+                            tela.fill((15, 15, 15))
+                            msg = fonte.render("Nenhum host LAN encontrado.", True, (255, 80, 80))
+                            tela.blit(msg, (largura // 2 - msg.get_width() // 2, altura // 2))
+                            pygame.display.flip()
+                            pygame.time.delay(3000)
 
                     # -----------------------------
                     # MODO OFFLINE
