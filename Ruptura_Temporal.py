@@ -161,7 +161,9 @@ def tela_escolha_modo():
                     # MODO OFFLINE
                     # -----------------------------
                     elif escolha == "Offline":
-                        return "offline", None
+                        pygame.mixer.music.stop()
+
+                        import GAME
 
 
 

@@ -9,7 +9,7 @@ import sys
 import json
 import threading
 import queue
-from Tela_Cartas import tela_de_pausa
+from Tela_Cartas_Coop import tela_de_pausa
 from rede import iniciar_host, conectar_ao_host,fila_envio,fila_recebimento,thread_envio,thread_recebimento, anunciar_host_udp, descobrir_host_udp
 from Variaveis import *
 from utils import *
